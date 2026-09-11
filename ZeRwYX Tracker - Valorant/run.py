@@ -100,7 +100,7 @@ def _fatal_dialog(message: str) -> None:
         ctypes.windll.user32.MessageBoxW(
             None,
             f"{message}\n\nDetails: {SCOUT_DIR / 'launcher.log'}",
-            "ZeRwYX Tracker", 0x10)
+            "Valorant Scout", 0x10)
     except Exception:
         pass
 
@@ -128,7 +128,7 @@ def resolve_python() -> str:
         return sys.executable
     die("VS-PY-001",
         "No Python environment found (.venv is missing). "
-            "Run install.bat to set up ZeRwYX Tracker.")
+        "Run install.bat to set up Valorant Scout.")
 
 def validate_runtime(py: str) -> None:
     if os.environ.get("VS_PREVALIDATED", "").strip() == "1":
@@ -205,7 +205,7 @@ def _kill_leftover_instances() -> bool:
     if not pids:
         return False
     for pid in pids:
-        say(f"A previous ZeRwYX Tracker (PID {pid}) is still closing — taking over.", C_DIM)
+        say(f"A previous Valorant Scout (PID {pid}) is still closing — taking over.", C_DIM)
         LOG.info("killing leftover instance pid=%s to take over", pid)
         subprocess.run(["taskkill", "/PID", str(pid), "/T", "/F"],
                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -357,7 +357,7 @@ def _kill_our_stale(port) -> bool:
     for pid in _port_pids(port):
         exe = _pid_exe(pid).lower()
         if exe == root or exe.startswith(prefix) or _is_ours(pid):
-            say(f"Port {port} is held by a previous ZeRwYX Tracker instance (PID {pid}) — closing it.", C_DIM)
+            say(f"Port {port} is held by a previous Valorant Scout instance (PID {pid}) — closing it.", C_DIM)
             LOG.info("closing our stale instance pid=%s on port %s", pid, port)
             subprocess.run(["taskkill", "/PID", str(pid), "/T"],
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -384,7 +384,7 @@ def choose_port(preferred, label: str, reserved=()) -> int:
                 time.sleep(0.25)
     holder = ""
     if preferred in reserved:
-        holder = "another ZeRwYX Tracker service"
+        holder = "another Valorant Scout service"
     else:
         for pid in _port_pids(preferred):
             holder = _pid_exe(pid) or f"PID {pid}"
@@ -580,14 +580,14 @@ def main():
 
     if not acquire_instance_lock():
         LOG.info("second instance blocked")
-        say("ZeRwYX Tracker is already running or being installed/updated.", C_WARN)
-        _fatal_dialog("ZeRwYX Tracker is already running or maintenance is in progress.\n\n"
+        say("Valorant Scout is already running or being installed/updated.", C_WARN)
+        _fatal_dialog("Valorant Scout is already running or maintenance is in progress.\n\n"
                       "Close the app or wait for install/update to finish, then try again.")
         return
 
     if not ATTACHED:
         print(f"{C_RED}{'='*58}{C_END}")
-        print(f"{C_RED}  ZeRwYX TRACKER{C_END}  {C_DIM}web + terminal · live scoreboard · instalock{C_END}")
+        print(f"{C_RED}  VALORANT SCOUT{C_END}  {C_DIM}web + terminal · live scoreboard · instalock{C_END}")
         print(f"{C_RED}{'='*58}{C_END}")
 
     source = os.environ.get("DATA_SOURCE", "auto")
@@ -770,9 +770,9 @@ def _report_crash():
             last = tb.strip().splitlines()[-1]
             ctypes.windll.user32.MessageBoxW(
                 None,
-                f"ZeRwYX Tracker couldn't start.\n\n{last}\n\n"
+                f"Valorant Scout couldn't start.\n\n{last}\n\n"
                 f"Details were saved to:\n{log}",
-                "ZeRwYX Tracker", 0x10)
+                "Valorant Scout", 0x10)
         except Exception:
             pass
 

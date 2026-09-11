@@ -10,10 +10,16 @@ requests==2.34.2
 python-dotenv==1.2.2
 urllib3==2.7.0
 rich==15.0.0
-websockets==13.1      
-ably==2.0.12          
-valclient==2.28     
-cryptography==49.0.0  
+pypresence==4.6.1      # Discord Rich Presence (optional; degrades if Discord/lib absent)
+websockets==13.1       # local WebSocket bridge for the hosted frontend
+ably==2.0.12           # remote/phone mode over Ably (optional; local mode works without it)
+valclient==2.28        # local Riot client API (career/match-history endpoints)
+cryptography==49.0.0   # offline-mode: convert Deceive's PKCS#12 chat cert -> PEM
+
+# --- transitive dependencies ---
+# pip installs these anyway; pinned so the resolver can't swap in a new version
+# underneath us. This file doubles as the constraints file for run.py's
+# on-demand installs, so every version lives here and nowhere else.
 anyio==4.13.0
 blinker==1.9.0
 certifi==2026.5.20

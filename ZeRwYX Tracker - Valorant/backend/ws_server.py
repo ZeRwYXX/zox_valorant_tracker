@@ -207,7 +207,7 @@ def start(*, board_provider, command_router, frontend_url: str, ws_port: int,
                     "supported": sorted(SUPPORTED_PROTOCOLS),
                     "appVersion": APP_VERSION,
                     "message": "This dashboard is not compatible with the installed "
-                               "ZeRwYX Tracker version. Run UPDATE.bat to update the app."})
+                               "Valorant Scout version. Run UPDATE.bat to update the app."})
                 await websocket.close(code=CLOSE_PROTOCOL, reason="Incompatible protocol")
                 return
 
@@ -335,7 +335,7 @@ def start(*, board_provider, command_router, frontend_url: str, ws_port: int,
     _WS_PORT = ws_port
     _READY.set()
     url = dashboard_url(_FRONTEND_URL, ws_port)
-    print("\n[ZeRwYX Tracker] Dashboard authentication ready; opening your browser.\n", flush=True)
+    print("\n[scout] Dashboard authentication ready; opening your browser.\n", flush=True)
     if open_dashboard and os.getenv("SCOUT_NO_BROWSER", "").strip() not in ("1", "true"):
         _spawn_opener(_FRONTEND_URL, url, backend_port)
 
@@ -350,10 +350,10 @@ def _spawn_opener(frontend_url: str, url: str, backend_port: int | None) -> None
             import ctypes
             ctypes.windll.user32.MessageBoxW(
                 None,
-                "ZeRwYX Tracker couldn't open your default browser.\n\n"
+                "Valorant Scout couldn't open your default browser.\n\n"
                 "Copy this private one-time dashboard URL (Ctrl+C copies this dialog):\n\n"
                 + url,
-                "ZeRwYX Tracker", 0x30)
+                "Valorant Scout", 0x30)
         except Exception:
             _log("couldn't open your browser automatically; set a default browser and restart")
 

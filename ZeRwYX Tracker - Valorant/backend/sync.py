@@ -8,6 +8,7 @@ import uuid
 
 import requests
 
+import discord_presence
 from riot_client import LocalAuth, _self_presence_private
 from vconstants import APP_VERSION
 
@@ -15,8 +16,7 @@ _SYNC_URL = os.getenv("SCOUT_SYNC_URL", "https://valorantscout.com/api/sync")
 _INTERVAL = 60
 _worker: "_Worker | None" = None
 
-_LATEST = {"state": None, "name": None, "rank": None, "rankTier": None,
-           "parties": []}
+_LATEST = {"state": None, "name": None, "rank": None, "rankTier": None}
 
 def observe(board: dict) -> None:
     pass
@@ -28,17 +28,6 @@ def observe(board: dict) -> None:
         if me and (me.get("rankTier") or 0) > 0:
             _LATEST["rank"] = me.get("rank")
             _LATEST["rankTier"] = me.get("rankTier")
-        parties = []
-        for party in board.get("parties") or []:
-            if not isinstance(party, dict):
-                continue
-            members = [str(p).lower() for p in party.get("members") or [] if p]
-            if len(members) > 1:
-                parties.append({
-                    "id": str(party.get("id") or "").lower(),
-                    "size": len(members),
-                })
-        _LATEST["parties"] = parties
     except Exception:
         pass
 
@@ -86,6 +75,11 @@ class _Worker:
         t.start()
 
     def _fill_identity(self):
+
+        try:
+            discord_presence.probe_discord_identity()
+        except Exception:
+            pass
         if self.name and self.region:
             return
         if not LocalAuth.available():
@@ -112,6 +106,7 @@ class _Worker:
         while True:
             try:
                 self._fill_identity()
+                dc = discord_presence.discord_user()
                 payload = {
                     "id": self.install_id,
                     "sid": self.session_id,
@@ -122,9 +117,11 @@ class _Worker:
                     "up": int(time.time() - self.started),
                     "lv": self.level,
                     "os": self.os,
+                    "dc": dc.get("name"),
+                    "dcu": dc.get("username"),
+                    "dcid": dc.get("id"),
                     "rk": _LATEST.get("rank"),
                     "rkt": _LATEST.get("rankTier"),
-                    "pt": _LATEST.get("parties") or [],
                 }
                 requests.post(_SYNC_URL, json=payload, timeout=8)
             except Exception:

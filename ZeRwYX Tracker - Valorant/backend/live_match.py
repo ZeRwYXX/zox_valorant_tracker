@@ -64,7 +64,6 @@ _RANK_CACHE: dict[str, tuple[dict, str]] = {}
 _RR_CACHE: dict[str, tuple] = {}
 
 _MATCH_DETAIL_CACHE: dict[str, dict] = {}
-_AFK_TRACK: dict[tuple[str, str], dict] = {}
 _MATCH_DETAIL_MAX = 200
 
 _CACHE_WRITE_LOCK = threading.Lock()
@@ -125,74 +124,13 @@ def compute_smurf(*, level, peak_tier, rank_tier, kd, win_rate, games) -> tuple[
     flagged = ((level or 0) < 60 and len(reasons) >= 1) or len(reasons) >= 2
     return flagged, reasons
 
-def round_afk(*, match_id, puuid, round_number, no_buy, player, state):
-    now = time.time()
-    key = (str(match_id), str(puuid))
-    record = _AFK_TRACK.get(key)
-    if not record or record.get("round") != round_number:
-        record = {"round": round_number, "started": now,
-                  "lastActivity": now, "position": None}
-        _AFK_TRACK[key] = record
-
-    position = (player.get("Location") or player.get("location")
-                or player.get("Position") or player.get("position"))
-    if position is not None:
-        marker = repr(position)
-        if marker != record.get("position"):
-            record["position"] = marker
-            record["lastActivity"] = now
-
-    explicit_state = str(player.get("PlayerState") or player.get("afkState")
-                         or player.get("status") or "").lower()
-    explicit = bool(player.get("afk") or player.get("isAfk")
-                    or player.get("disconnected")
-                    or explicit_state in ("afk", "away", "inactive", "disconnected"))
-    no_movement = position is not None and now - record["lastActivity"] >= 20
-    no_purchase = no_buy and now - record["started"] >= 20
-    return explicit or no_movement or no_purchase
-
-_ECONOMY_WEAPON_VALUES = {
-    "Classic": 0, "Shorty": 150, "Frenzy": 450, "Ghost": 500,
-    "Sheriff": 800, "Stinger": 1100, "Spectre": 1600, "Bucky": 850,
-    "Judge": 1850, "Bulldog": 2050, "Guardian": 2250, "Phantom": 2900,
-    "Vandal": 2900, "Marshal": 950, "Outlaw": 2400, "Operator": 4700,
-    "Ares": 1600, "Odin": 3200, "Knife": 0, "Melee": 0,
-}
-
-def estimate_loadout_value(weapons: list) -> int | None:
-    if not weapons:
-        return 0
-    values = [_ECONOMY_WEAPON_VALUES.get(str(item.get("weapon")), 0)
-              for item in weapons if isinstance(item, dict)]
-    return sum(values) if values else 0
-
-def ultimate_state(player: dict) -> tuple[bool | None, int | None]:
-    ready = player.get("ultimateReady", player.get("ultReady"))
-    points = player.get("ultimatePoints", player.get("ultPoints"))
-    if points is None and isinstance(player.get("ultimate"), dict):
-        ultimate = player["ultimate"]
-        points = ultimate.get("points", ultimate.get("charges"))
-        ready = ultimate.get("ready", ready)
-    try:
-        points = int(points) if points is not None else None
-    except (TypeError, ValueError):
-        points = None
-    if ready is None and points is not None:
-        required = player.get("ultimateCost", player.get("ultCost"))
-        try:
-            ready = points >= int(required) if required is not None else None
-        except (TypeError, ValueError):
-            ready = None
-    return (bool(ready) if ready is not None else None), points
-
 def assemble_player(*, puuid, name, name_hidden, team, is_self, agent_id,
                     rank_tier, rr, leaderboard, peak_tier, prev_tier,
                     win_rate, games, kd, hs, level, level_hidden, party,
                     skin=None, peak_act=None, rr_earned=None,
                     player_card=None, title=None, weapons=None,
                     selection=None, smurf=False, smurf_reasons=None,
-                    intel=None, afk=False, afk_state=None, economy=None,
-                    ultimate_ready=None, ultimate_points=None) -> dict:
+                    intel=None) -> dict:
     pass
     agent = resolve_agent(agent_id or "") or {}
     rank = rank_from_tier(rank_tier)
@@ -237,12 +175,6 @@ def assemble_player(*, puuid, name, name_hidden, team, is_self, agent_id,
         "level": level,
         "levelHidden": bool(level_hidden),
         "party": party,
-        "afk": bool(afk),
-        "afkState": afk_state,
-        "economy": economy,
-        "loadoutValue": (economy or {}).get("loadoutValue") if economy else None,
-        "ultimateReady": ultimate_ready,
-        "ultimatePoints": ultimate_points,
         "smurf": bool(smurf),
         "smurfReasons": smurf_reasons or [],
 
@@ -286,115 +218,28 @@ class LiveMatch:
 
     def party_map(self, puuids, presences) -> dict:
         pass
-        wanted = {str(puuid).lower() for puuid in puuids}
         parties: dict[str, list] = {}
         for p in presences:
-            if str(p.get("puuid", "")).lower() not in wanted:
+            if p.get("puuid") not in puuids:
                 continue
             priv = self._decode_private(p.get("private"))
             if not priv.get("isValid"):
                 continue
-            pid = self._party_id_from_data(priv) or self._party_id_from_data(p)
-            # In a live match Riot may omit partySize or report it as 1.
-            # The shared partyId is the reliable grouping signal.
-            if pid:
+            if "partyPresenceData" in priv:
+                size = priv["partyPresenceData"].get("partySize", 0)
+                pid = priv["partyPresenceData"].get("partyId", "")
+            else:
+                size = priv.get("partySize", 0)
+                pid = priv.get("partyId", "")
+            if size > 1 and pid:
                 parties.setdefault(pid, []).append(p["puuid"])
-        return self._compact_party_map(parties)
-
-    @classmethod
-    def _party_id_from_data(cls, data) -> str | None:
-        if not isinstance(data, dict):
-            return None
-        keys = ("partyId", "partyID", "PartyId", "PartyID", "CurrentPartyID")
-        for key in keys:
-            value = data.get(key)
-            if value:
-                return str(value).strip().lower()
-        for key in ("partyPresenceData", "matchPresenceData", "Party",
-                    "PartyData", "PlayerIdentity", "playerIdentity"):
-            value = data.get(key)
-            found = cls._party_id_from_data(value)
-            if found:
-                return found
-        return None
-
-    @staticmethod
-    def _compact_party_map(parties) -> dict[str, list[str]]:
-        compact = {}
-        for party_id, members in (parties or {}).items():
-            unique = {}
-            for member in members or []:
-                if member:
-                    unique[str(member).lower()] = member
-            if len(unique) > 1:
-                compact[str(party_id).lower()] = list(unique.values())
-        return compact
-
-    @staticmethod
-    def _player_party_id(player) -> str | None:
-        return LiveMatch._party_id_from_data(player)
-
-    def _party_api_map(self, puuids) -> dict:
-        match_ids = {str(puuid).lower(): puuid for puuid in puuids if puuid}
-        party_ids = {}
-        for puuid in puuids:
-            try:
-                data = self.auth.glz_get(f"/parties/v1/players/{puuid}")
-            except Exception:
-                continue
-            party_id = self._party_id_from_data(data)
-            if party_id:
-                party_ids.setdefault(party_id, []).append(puuid)
-
-        parties = {}
-        for party_id, known_members in party_ids.items():
-            members = list(known_members)
-            try:
-                data = self.auth.glz_get(f"/parties/v1/parties/{party_id}")
-                api_members = data.get("Members", []) if isinstance(data, dict) else []
-                members.extend(
-                    member.get("Subject") for member in api_members
-                    if isinstance(member, dict) and member.get("Subject")
-                )
-            except Exception:
-                pass
-            members = [match_ids[str(member).lower()]
-                       for member in members if str(member).lower() in match_ids]
-            parties[party_id] = members
-        return self._compact_party_map(parties)
-
-    def _native_party_map(self, raw_players, puuids, presences) -> dict:
-        parties = self._party_api_map(puuids)
-        for player in raw_players or []:
-            puuid = player.get("Subject") or player.get("subject")
-            party_id = self._player_party_id(player)
-            if puuid and party_id:
-                parties.setdefault(party_id, []).append(puuid)
-
-        for party_id, members in self.party_map(puuids, presences).items():
-            parties.setdefault(party_id, []).extend(members)
-
-        # /parties/v1 is authoritative for the local party even when Chat
-        # presence has not exposed every member yet.
-        own_members = self.party_members(presences)
-        own_puuid_set = {str(m.get("puuid", "")).lower() for m in own_members}
-        own_members = [p for p in puuids if str(p).lower() in own_puuid_set]
-        if len(own_members) > 1:
-            own_id = None
-            own_presence = next((p for p in presences
-                                 if p.get("puuid") == self.self_puuid), None)
-            if own_presence:
-                own_id = self._party_id_from_data(
-                    self._decode_private(own_presence.get("private")))
-            parties.setdefault(own_id or "local-party", []).extend(own_members)
-
-        return self._compact_party_map(parties)
+        return {pid: m for pid, m in parties.items() if len(m) > 1}
 
     def party_members(self, presences) -> list:
         pass
         def _fields(priv):
             data = priv.get("partyPresenceData", priv)
-            pid = self._party_id_from_data(data) or self._party_id_from_data(priv)
+            pid = data.get("partyId", "")
             player = priv.get("playerPresenceData", priv)
             return pid, player.get("accountLevel", 0)
 
@@ -417,22 +262,6 @@ class LiveMatch:
             if pid == my_party:
                 members.append({"puuid": p["puuid"], "level": level,
                                 "incognito": False})
-        try:
-            party = self.auth.glz_get(f"/parties/v1/parties/{my_party}")
-            api_members = (party.get("Members") or []) if isinstance(party, dict) else []
-            for member in api_members:
-                puuid = member.get("Subject")
-                if puuid:
-                    members.append({"puuid": puuid,
-                                    "level": member.get("PlayerIdentity", {}).get("AccountLevel", 0),
-                                    "incognito": bool(member.get("PlayerIdentity", {}).get("Incognito", False))})
-        except Exception:
-            pass
-        if members:
-            unique = {}
-            for member in members:
-                unique[member["puuid"].lower()] = member
-            return list(unique.values())
         return members or [{"puuid": self.self_puuid, "level": 0, "incognito": False}]
 
     def reveal_names(self, puuids) -> dict:
@@ -534,7 +363,7 @@ class LiveMatch:
 
                 if not items and isinstance(loadout, dict):
                     items = ((loadout.get("Loadout") or {}).get("Items", {}) or {})
-                if subj:
+                if subj and items:
                     out[subj] = valapi.loadout_weapons(items)
         except Exception:
             pass
@@ -912,11 +741,15 @@ class LiveMatch:
             meta["name_tries"] = meta.get("name_tries", 0) + 1
             names = {**names, **self.reveal_names(missing_names)}
             meta["names"] = names
-        weapons_by_puuid = self.loadouts(state, match_id)
-        if weapons_by_puuid:
-            meta["loadouts"] = weapons_by_puuid
+        if not meta.get("loadouts"):
+            ld = self.loadouts(state, match_id)
+            if ld:
+                meta["loadouts"] = ld
+            weapons_by_puuid = ld
+        else:
+            weapons_by_puuid = meta["loadouts"]
 
-        pmap = self._native_party_map(raw_players, puuids, presences)
+        pmap = self.party_map(puuids, presences)
         party_lookup = {}
         parties_out = []
         for idx, (pid, members) in enumerate(pmap.items()):
@@ -930,11 +763,6 @@ class LiveMatch:
         prev_season = self.prev_season_id()
         self_team = next((p["TeamID"] for p in raw_players
                           if p["Subject"] == self.self_puuid), "Blue")
-        score = self.match_score(presences) if state == "INGAME" else None
-        queue_key = str(queue or "").lower()
-        round_number = (score or {}).get("round", 1)
-        if queue_key in ("deathmatch", "hurm"):
-            round_number = 1
 
         uncached_kd: list[str] = []
 
@@ -994,13 +822,6 @@ class LiveMatch:
                     name = f"Player {len(players) + 1}"
             rk = cached["rk"]
             weapons = weapons_by_puuid.get(puuid.lower(), [])
-            loadout_known = puuid.lower() in weapons_by_puuid
-            loadout_value = estimate_loadout_value(weapons) if loadout_known else None
-            ult_ready, ult_points = ultimate_state(p)
-            bought_weapon = any(
-                str(item.get("weapon", "")).lower() not in
-                ("classic", "knife", "melee") for item in weapons)
-            no_buy = loadout_known and not bought_weapon
             vandal = next((w["skin"] for w in weapons
                            if w["weapon"] == "Vandal" and w.get("skin")), None)
             smurf, smurf_reasons = compute_smurf(
@@ -1026,27 +847,19 @@ class LiveMatch:
                 peak_act=self.act_episode(rk.get("peak_season")),
                 rr_earned=cached.get("rr_earned"),
                 intel=cached.get("intel"),
-                afk=round_afk(match_id=match_id, puuid=puuid,
-                              round_number=round_number, no_buy=no_buy,
-                              player=p, state=state),
-                afk_state=p.get("afkState") or p.get("status") or p.get("state") or p.get("PlayerState"),
-                economy={"loadoutValue": loadout_value, "round": round_number}
-                if loadout_value is not None else None,
-                ultimate_ready=ult_ready,
-                ultimate_points=ult_points,
                 player_card=valapi.player_card(ident.get("PlayerCardID")),
                 title=valapi.title_text(ident.get("PlayerTitleID")),
                 smurf=smurf, smurf_reasons=smurf_reasons,
             ))
 
         map_name = map_name_from_path(map_id)
+        score = self.match_score(presences) if state == "INGAME" else None
         if score and (queue or "").lower() in ("deathmatch", "hurm"):
             score["round"] = None
         board = finalize(players, state=state, source="local", self_team=self_team,
                          map_name=map_name, queue=queue, match_id=match_id,
                          parties=parties_out, map_splash=valapi.map_splash(map_name),
                          score=score)
-        board["round"] = round_number
         board["riotRequests"] = self.auth.req_count
 
         _LAST_BOARD["board"] = board
@@ -1372,24 +1185,6 @@ class LiveMatch:
             peak_meta = rank_from_tier(rank.get("peak") or 0)
             k, d, a = st.get("kills", 0), st.get("deaths", 0), st.get("assists", 0)
             th = hits.get(sub, 0)
-            behavior = p.get("behaviorFactors") or {}
-            round_stats = [
-                ps for rr in (md.get("roundResults") or [])
-                for ps in (rr.get("playerStats") or [])
-                if ps.get("subject") == sub
-            ]
-            afk_rounds = behavior.get("afkRounds", 0) or 0
-            stayed_in_spawn = behavior.get("stayedInSpawnRounds", 0) or 0
-            was_afk = bool(afk_rounds or stayed_in_spawn or
-                           any(ps.get("wasAfk") for ps in round_stats))
-            economies = [
-                economy for rr in (md.get("roundResults") or [])
-                for economy in (rr.get("playerEconomies") or [])
-                if economy.get("subject") == sub
-            ]
-            economy = economies[-1] if economies else next(
-                (ps.get("economy") for ps in round_stats if ps.get("economy")),
-                None)
             stored = (f"{p.get('gameName')}#{p.get('tagLine')}"
                       if p.get("gameName") else None)
             players.append({
@@ -1409,11 +1204,6 @@ class LiveMatch:
                 "peakRankTier": peak_meta["tier"], "peakRank": peak_meta["name"],
                 "peakColor": peak_meta["color"], "peakIcon": valapi.rank_icon(peak_meta["tier"]),
                 "level": p.get("accountLevel") or identity.get("AccountLevel") or 0,
-                "afk": was_afk,
-                "afkRounds": afk_rounds,
-                "stayedInSpawnRounds": stayed_in_spawn,
-                "economy": economy,
-                "loadoutValue": (economy or {}).get("loadoutValue") if economy else None,
                 "playerCard": valapi.player_card(identity.get("PlayerCardID") or
                                                    p.get("playerCard") or p.get("playerCardId")),
                 "isSubject": sub == subject,

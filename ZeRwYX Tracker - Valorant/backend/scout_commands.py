@@ -18,7 +18,6 @@ ALLOWED_COMMANDS = {
     "launch_offline",
     "offline_status",
     "offline_toggle",
-    "fake_message",
     "reset_session",
     "start_session",
     "end_session",
@@ -120,8 +119,6 @@ class CommandRouter:
                 return self._offline_status(payload)
             if command == "offline_toggle":
                 return self._offline_toggle(payload)
-            if command == "fake_message":
-                return self._fake_message(payload)
             if command == "reset_session":
                 return self._reset_session(payload)
             if command == "start_session":
@@ -153,8 +150,7 @@ class CommandRouter:
         mode = (payload.get("mode") or "lock").lower()
         dry_run = bool(payload.get("dryRun", True))
         region = payload.get("region")
-        delay = payload.get("delay", 5)
-        loop = bool(payload.get("loop", False))
+        delay = payload.get("delay", 0)
         per_map = payload.get("perMap") if isinstance(payload.get("perMap"), dict) else None
 
         if action == "once":
@@ -172,7 +168,7 @@ class CommandRouter:
                     "message": f"DRY-RUN: would {mode} {ag['name']} when agent "
                                f"select starts. Turn dry-run OFF to auto-lock."}
         r = self.instalock_worker.start(agent, mode=mode, delay=delay,
-                        region=region, per_map=per_map, loop=loop)
+                                        region=region, per_map=per_map)
         msg = r.get("message") or ("Armed — waiting for agent select…"
                                    if r.get("ok") else "Couldn't start.")
         return {**r, "ok": bool(r.get("ok")), "message": msg}
@@ -225,13 +221,6 @@ class CommandRouter:
         if "status" in payload:
             return offline_launch.set_status(str(payload.get("status")))
         return offline_launch.set_enabled(bool(payload.get("enabled", True)))
-
-    def _fake_message(self, payload: dict) -> dict:
-        import offline_launch
-        return offline_launch.send_fake_message(
-            payload.get("nickname", "Joueur"), payload.get("text", ""),
-            payload.get("channel", "all"),
-            payload.get("customGameTeam", "TeamSpectate"))
 
     def _owner(self) -> str | None:
         return (self.board_provider() or {}).get("selfPuuid")

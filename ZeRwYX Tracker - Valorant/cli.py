@@ -13,7 +13,7 @@ sys.path.insert(0, str(ROOT / "backend"))
 
 os.environ["SCOUT_QUIET"] = "1"
 
-print("\n  Starting ZeRwYX Tracker...\n  The scoreboard will appear in this window in a moment.", flush=True)
+print("\n  Starting Valorant Scout...\n  The scoreboard will appear in this window in a moment.", flush=True)
 
 def _load_env():
     for p in (ROOT / ".env", ROOT / "backend" / ".env"):
@@ -214,7 +214,7 @@ def render(board) -> Group:
         msg = ((notice or {}).get("message") or board.get("error")
                or "Open VALORANT — lobby, Agent Select or a match.")
         return Group(Panel(Text(f"No players to show.\n{msg}", justify="center"),
-                           title="ZeRwYX TRACKER", border_style="#FF4655", box=box.HEAVY))
+                           title="VALORANT SCOUT", border_style="#FF4655", box=box.HEAVY))
 
     table = Table(box=box.SIMPLE_HEAVY, expand=False, show_edge=False, pad_edge=False,
                   header_style="bold #7E8C92", border_style="grey23")
@@ -248,7 +248,7 @@ def render(board) -> Group:
             legend.append(f"●{p['number']} ", style=f"bold {p['color']}")
             legend.append(f"{p['size']}-stack   ", style="grey62")
 
-    panel = Panel(table, title="[bold #FF4655]ZeRwYX[/] [bold #ECE8E1]TRACKER[/]",
+    panel = Panel(table, title="[bold #FF4655]VALORANT[/] [bold #ECE8E1]SCOUT[/]",
                   subtitle=head, border_style="#FF4655", box=box.HEAVY, padding=(0, 1))
     rows = [panel, legend]
     if notice:
@@ -257,7 +257,7 @@ def render(board) -> Group:
     return Group(*rows)
 
 def main():
-    ap = argparse.ArgumentParser(description="ZeRwYX Tracker terminal scoreboard")
+    ap = argparse.ArgumentParser(description="Valorant Scout terminal scoreboard")
     ap.add_argument("--once", action="store_true", help="print once and exit")
     ap.add_argument("--interval", type=float, default=5.0, help="refresh seconds")
     ap.add_argument("--seed", type=int, default=7, help="demo lobby seed")
@@ -273,7 +273,7 @@ def main():
         threading.Thread(target=_bridge_loop, daemon=True,
                          name="scout-bridge").start()
 
-    _set_window_title("ZeRwYX Tracker — Scoreboard")
+    _set_window_title("Valorant Scout — Scoreboard")
 
     if args.once:
         console.print(render(build_board(args.seed)))

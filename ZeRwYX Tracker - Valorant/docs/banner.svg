@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="300" viewBox="0 0 1200 300" role="img" aria-label="ZeRwYX Tracker">
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="300" viewBox="0 0 1200 300" role="img" aria-label="Valorant Scout">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#0A0A0C"/>
@@ -34,7 +34,7 @@
   </g>
 
   <text x="270" y="150" font-family="'Segoe UI',Arial,sans-serif" font-size="78" font-weight="800" letter-spacing="2">
-    <tspan fill="#F4F4F5">ZeRwYX</tspan> <tspan fill="#FF4655">TRACKER</tspan>
+    <tspan fill="#F4F4F5">VALORANT</tspan> <tspan fill="#FF4655">SCOUT</tspan>
   </text>
   <text x="272" y="194" font-family="'Consolas','Courier New',monospace" font-size="21" letter-spacing="2" fill="#8B8B92">
     live recon · ranks · smurf radar · instalock · ascii art

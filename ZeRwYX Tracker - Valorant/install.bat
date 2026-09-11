@@ -1,5 +1,5 @@
 @echo off
-title ZeRwYX Tracker - Setup
+title Valorant Scout - Setup
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\install.ps1" %*
 set "VS_EXIT=%ERRORLEVEL%"
 echo.

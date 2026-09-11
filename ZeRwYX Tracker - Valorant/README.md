@@ -1,17 +1,17 @@
 <div align="center">
 
-![ZeRwYX Tracker](docs/banner.svg)
+![Valorant Scout](docs/banner.svg)
 
-# ZeRwYX Tracker
+# Valorant Scout
 
 **Live in-match intelligence for VALORANT — see every player's rank, peak, K/D, win-rate, smurf risk, full skin inventory and party before the round even starts.**
 
-Reads your **local VALORANT client** in real time and renders it as a slick web dashboard and a colour-coded terminal scoreboard — plus **appear offline**, your **collection value**, **rank/RR history**, a **209-crosshair studio**, a **647-player sensitivity lab**, an instalock helper, a cross-session encounter log, and a VALORANT chat **ASCII art studio**.
+Reads your **local VALORANT client** in real time and renders it as a slick web dashboard, a colour-coded terminal scoreboard, and your **Discord status** — plus **appear offline**, your **collection value**, **rank/RR history**, a **209-crosshair studio**, a **647-player sensitivity lab**, an instalock helper, a cross-session encounter log, and a VALORANT chat **ASCII art studio**.
 
 ### 🌐 [**valorantscout.com**](https://valorantscout.com)
 Try the live dashboard right now — it runs in **demo mode** with VALORANT closed, no install needed.
 
-[Features](#-features) · [Quick start](#-quick-start) · [Screens](#-screens) · [CLI](#-terminal-cli) · [Config](#-configuration) · [Credits](#-credits)
+[Features](#-features) · [Quick start](#-quick-start) · [Screens](#-screens) · [CLI](#-terminal-cli) · [Discord](#-discord-rich-presence) · [Config](#-configuration) · [Credits](#-credits)
 
 [VALORANT Rank Checker](https://valorantscout.com/valorant-rank-checker) · [Live Scoreboard](https://valorantscout.com) · [VALORANT Smurf Detector](https://valorantscout.com/valorant-smurf-detector) · [Appear Offline in VALORANT](https://valorantscout.com/valorant-offline-mode) · [VALORANT Crosshair Codes](https://valorantscout.com/valorant-crosshairs) · [VALORANT Sensitivity](https://valorantscout.com/valorant-sensitivity) · [VALORANT ASCII Art](https://valorantscout.com/ascii)
 
@@ -22,12 +22,12 @@ Try the live dashboard right now — it runs in **demo mode** with VALORANT clos
 ## 🌐 The website — [valorantscout.com](https://valorantscout.com)
 
 The dashboard lives at **[valorantscout.com](https://valorantscout.com)** — the very same
-web app `start.bat` opens for you. The site is **only the UI**: it connects securely back to ZeRwYX Tracker
+web app `start.bat` opens for you. The site is **only the UI**: it connects securely back to the Scout
 app running on your own PC over a local, token-authenticated link, so **your match data never leaves
 your machine** and nothing is stored on a server. No account, no login, nothing to host yourself.
 
 - **Always up to date** — you get the latest dashboard automatically; the desktop app just runs the local data bridge.
-- **View on phone** — once ZeRwYX Tracker is running, scan the in-app QR to open a read-only board on your phone through the same site.
+- **View on phone** — once Scout is running, scan the in-app QR to open a read-only board on your phone through the same site.
 - **Demo mode** — with VALORANT closed the site shows a fully-populated demo lobby, so you can explore the UI before installing.
 
 ---
@@ -46,9 +46,9 @@ your machine** and nothing is stored on a server. No account, no login, nothing 
 ### 🫥 Appear offline
 Launch VALORANT and show up **offline** to your friends — no third-party binary, built from scratch.
 - Pick how you appear: **offline / away / mobile** (or back to **online**), from the app or the website.
-- Switch anytime without relaunching — change it in-app, or message the pinned **"Assistant local"** friend in-game (`offline`, `away`, `mobile`, `online`).
+- Switch anytime without relaunching — change it in-app, or message the pinned **"Valorant Scout Active"** friend in-game (`offline`, `away`, `mobile`, `online`).
 - Status sticks between launches, and a live indicator confirms you're actually hidden.
-- Close and reopen ZeRwYX Tracker without breaking the offline session, friends list or matchmaking controls — the windowless relay stays active until Riot and VALORANT close.
+- Close and reopen Scout without breaking the offline session, friends list or matchmaking controls — the windowless relay stays active until Riot and VALORANT close.
 
 ### 🎯 Crosshair library
 **209 pro & community crosshairs** with pixel-accurate previews, nine selectable game scenes, movement/firing states, search, filters, favorites, comparison, and a full import-code builder. One click copies a code or share link, and community creations can be submitted for owner review.
@@ -85,6 +85,9 @@ Resolves Incognito ("hidden") names where the client allows it, and never render
 ### 🗂️ Encounter log
 A local JSON ledger of everyone you've played with or against, with play counts and their latest stats — so "haven't I seen this Jett before?" finally has an answer.
 
+### 🎮 Discord Rich Presence
+Shows your VALORANT status on your Discord profile: **map, mode, rank, agent, side and live score** across lobby / agent-select / in-game.
+
 ### ⌨️ Terminal CLI
 A fast, colour-coded `rich` scoreboard for a second monitor — same data, no browser.
 
@@ -111,7 +114,7 @@ are never touched. ARM64 and 32-bit Windows are not supported.
    folder; `install.bat` and `start.bat` are right there inside it.
 2. Double-click **`install.bat`** — one-time setup **and** repair tool. It verifies (or installs)
    the exact Python runtime, installs pinned packages, asks you to **pick your region**, and drops
-   a **ZeRwYX Tracker** shortcut on your Desktop. Safe to re-run any time — it only fixes what's
+   a **Valorant Scout** shortcut on your Desktop. Safe to re-run any time — it only fixes what's
    broken and never touches your settings or data.
 3. Double-click **`start.bat`** (or the Desktop shortcut) any time to launch. It **keeps itself
    up to date automatically**: every launch checks for a newer release and, if there is one,
@@ -158,6 +161,9 @@ python run.py --cli      # terminal scoreboard only
 ### Terminal CLI
 ![Terminal scoreboard](docs/screenshots/cli.svg)
 
+### Discord Rich Presence
+![Discord presence](docs/screenshots/discord.png)
+
 ---
 
 ## ⌨️ Terminal CLI
@@ -173,6 +179,10 @@ Columns: Party · Agent · Name · Rank · RR · Peak (with act) · Previous · 
 
 ---
 
+## 🎮 Discord Rich Presence
+
+Enabled by default — just have the **Discord desktop app** running. It updates every ~15s with your map, mode, rank, agent, side and live score. Disable it with `DISCORD_RPC=false` in your `.env`.
+
 ---
 
 ## ⚙️ Configuration
@@ -184,6 +194,7 @@ Copy `backend/.env.example` to `backend/.env`. **Everything is optional** — th
 | `RIOT_API_KEY` | Optional official Riot API key (improves name resolution). |
 | `RIOT_REGION` | Pin your region (`na`, `eu`, `ap`, `kr`, `latam`, `br`) instead of auto-detect. |
 | `DATA_SOURCE` | `auto` (live if the client is running, else demo), `live`, or `demo`. |
+| `DISCORD_RPC` | `true` / `false` — toggle Discord Rich Presence. |
 | `ALLOW_LIVE_INSTALOCK` | `true` / `false` — allow real (non-dry-run) instalock/dodge. |
 
 ---
@@ -194,10 +205,10 @@ Copy `backend/.env.example` to `backend/.env`. **Everything is optional** — th
 VALORANT local client  ──►  Flask API (backend/)  ──►  Next.js dashboard (frontend/)
    lockfile + edge APIs        live_match pipeline         React + Tailwind + Motion
                                     │  └─►  Rich terminal CLI (cli.py)
-                                    └─►  Rich terminal CLI (cli.py)
+                                    └─►  Discord Rich Presence (pypresence)
 ```
 
-- **`backend/`** — Flask service: live scoreboard pipeline, rank/stat resolution, party detection, encounter log, instalock worker, appear-offline chat proxy (`offline_launch.py`), RR history (`history.py`) and collection valuation (`inventory.py`). Art metadata is resolved from the public [valorant-api.com](https://valorant-api.com) CDN, so no binary assets are bundled.
+- **`backend/`** — Flask service: live scoreboard pipeline, rank/stat resolution, party detection, encounter log, instalock worker, Discord presence, appear-offline chat proxy (`offline_launch.py`), RR history (`history.py`) and collection valuation (`inventory.py`). Art metadata is resolved from the public [valorant-api.com](https://valorant-api.com) CDN, so no binary assets are bundled.
 - **`frontend/`** — Next.js (pages router) + Tailwind + Framer Motion.
 - **`cli.py`** — standalone terminal scoreboard.
 - **`run.py`** — one-command launcher for the whole stack.
@@ -206,9 +217,9 @@ VALORANT local client  ──►  Flask API (backend/)  ──►  Next.js dashb
 
 ## 🙏 Credits
 
-ZeRwYX Tracker stands on the shoulders of the community projects that mapped out the local client and inspired these features:
+Valorant Scout stands on the shoulders of the community projects that mapped out the local client and inspired these features:
 
-- **[VALORANT-rank-yoinker](https://github.com/zayKenyon/VALORANT-rank-yoinker)** — the live scoreboard / rank pipeline approach.
+- **[VALORANT-rank-yoinker](https://github.com/zayKenyon/VALORANT-rank-yoinker)** — the live scoreboard / rank pipeline and Discord presence approach.
 - **[Fast-Pick](https://github.com/Imu-D-sama/Fast-Pick)** — the instalock, check-side and dodge flow, and region handling.
 - **[ValForge](https://valforge.gg/ascii)** — the community, free-to-use, open-source ASCII gallery that seeds the chat art studio (credit to its individual art creators).
 - **[valorant-api.com](https://valorant-api.com)** — agent / weapon / rank / map / season art and metadata.
@@ -223,4 +234,4 @@ Licensed under the **GNU General Public License v3.0** — see [`LICENSE`](LICEN
 
 ## ⚠️ Disclaimer
 
-ZeRwYX Tracker is a third-party tool and is **not affiliated with, endorsed by, or sponsored by Riot Games**. It reads the local client's APIs and can automate parts of agent select; **client automation may violate Riot's Terms of Service** and is provided for educational use. Instalock / dodge are **dry-run by default** — you opt in at your own risk.
+Valorant Scout is a third-party tool and is **not affiliated with, endorsed by, or sponsored by Riot Games**. It reads the local client's APIs and can automate parts of agent select; **client automation may violate Riot's Terms of Service** and is provided for educational use. Instalock / dodge are **dry-run by default** — you opt in at your own risk.

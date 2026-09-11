@@ -38,8 +38,7 @@ class InstalockWorker:
         self._stop = threading.Event()
         self._lock = threading.Lock()
         self.state = {"running": False, "status": "idle", "message": "",
-                  "agent": None, "mode": "lock", "loop": False, "delay": 5.0,
-                  "side": None, "map": None}
+                      "agent": None, "mode": "lock", "side": None, "map": None}
 
     def status(self) -> dict:
         return dict(self.state)
@@ -53,36 +52,30 @@ class InstalockWorker:
                 out[str(k).strip().lower()] = str(v).strip()
         return out
 
-    def start(self, agent_id: str, mode: str = "lock", delay: float = 5.0,
-              region: str | None = None, per_map: dict | None = None,
-              loop: bool = False) -> dict:
+    def start(self, agent_id: str, mode: str = "lock", delay: float = 0.0,
+              region: str | None = None, per_map: dict | None = None) -> dict:
         agent = resolve_agent(agent_id)
         if not agent:
-            return {"ok": False, "message": f"Agent inconnu : « {agent_id} »."}
+            return {"ok": False, "message": f"Unknown agent '{agent_id}'."}
         per_map_norm = self._normalize_per_map(per_map)
 
         for mapn, name in per_map_norm.items():
             if not resolve_agent(name):
                 return {"ok": False,
-                        "message": f"Agent inconnu : « {name} » pour la carte « {mapn} »."}
+                        "message": f"Unknown agent '{name}' for map '{mapn}'."}
         self.stop()
         with self._lock:
             self._stop.clear()
-            try:
-                delay_seconds = max(0.0, float(delay if delay is not None else 5))
-            except (TypeError, ValueError):
-                return {"ok": False, "message": "Le délai doit être un nombre de secondes."}
             self.state.update(running=True, status="waiting", agent=agent["name"],
-                              mode=mode, loop=bool(loop), delay=delay_seconds, side=None, map=None,
-                              message="Instalock prêt : en attente de la sélection des agents…")
+                              mode=mode, side=None, map=None,
+                              message="Armed — waiting for agent select…")
             self._thread = threading.Thread(
                 target=self._loop,
-                args=(agent, mode, delay_seconds, region, per_map_norm, bool(loop)),
+                args=(agent, mode, float(delay or 0), region, per_map_norm),
                 daemon=True)
             self._thread.start()
         return {"ok": True, "running": True, "agent": agent["name"],
-                "status": "waiting", "loop": bool(loop), "delay": delay_seconds,
-                "perMap": per_map_norm}
+                "status": "waiting", "perMap": per_map_norm}
 
     def stop(self) -> dict:
         self._stop.set()
@@ -94,70 +87,65 @@ class InstalockWorker:
         self.state.update(running=False)
         return {"ok": True, "running": False}
 
-    def _loop(self, agent: dict, mode: str, delay: float, region, per_map: dict,
-              loop: bool):
+    def _loop(self, agent: dict, mode: str, delay: float, region, per_map: dict):
         done: set[str] = set()
-        auth = None
+        try:
+            auth = LocalAuth(region)
+            auth.headers()
+        except Exception as e:
+            self.state.update(running=False, status="error",
+                              message=f"Couldn't reach the local client: {e}")
+            return
 
         while not self._stop.is_set():
             try:
-                if auth is None:
-                    auth = LocalAuth(region)
-                    auth.headers()
                 presences = (auth.local_get("/chat/v4/presences") or {}).get("presences", [])
                 st = _self_session_state(presences, auth.puuid)
-                # The pregame endpoint is also authoritative for custom games;
-                # chat presence can lag behind or use a different session state.
-                pg = auth.glz_get(f"/pregame/v1/players/{auth.puuid}")
-                mid = pg.get("MatchID") if isinstance(pg, dict) else None
-                if mid and mid not in done:
-                    if delay > 0 and self._stop.wait(delay):
-                        break
-                    match = auth.glz_get(f"/pregame/v1/matches/{mid}")
-                    side = _side_from_match(match, auth.puuid)
-                    map_name = map_name_from_path((match or {}).get("MapID", ""))
+                if st == "PREGAME":
+                    pg = auth.glz_get(f"/pregame/v1/players/{auth.puuid}")
+                    mid = pg.get("MatchID") if isinstance(pg, dict) else None
+                    if mid and mid not in done:
+                        if delay > 0 and self._stop.wait(delay):
+                            break
+                        match = auth.glz_get(f"/pregame/v1/matches/{mid}")
+                        side = _side_from_match(match, auth.puuid)
+                        map_name = map_name_from_path((match or {}).get("MapID", ""))
 
-                    chosen = agent
-                    override = per_map.get((map_name or "").lower())
-                    if override:
-                        resolved = resolve_agent(override)
-                        if resolved:
-                            chosen = resolved
-                    agent_id = chosen["uuid"]
-                    selected = auth.glz_post(f"/pregame/v1/matches/{mid}/select/{agent_id}")
-                    if selected.status_code >= 400:
-                        raise RuntimeError(f"sélection refusée (HTTP {selected.status_code})")
-                    if mode == "lock":
-                        locked = auth.glz_post(f"/pregame/v1/matches/{mid}/lock/{agent_id}")
-                        if locked.status_code >= 400:
-                            raise RuntimeError(f"verrouillage refusé (HTTP {locked.status_code})")
-                    done.add(mid)
-                    self.state.update(
-                        running=bool(loop), status="waiting" if loop else "locked", side=side,
-                        agent=chosen["name"], map=map_name,
-                        message=(f"{'Agent verrouillé' if mode == 'lock' else 'Agent survolé'} : "
-                            f"{chosen['name']}"
-                            + (f" sur {map_name}" if map_name and map_name != "Unknown" else "")
-                            + "!"
-                            + (f"  Tu es en {side}." if side else "")
-                            + (" Prochain cycle armé." if loop else "")))
-                    if not loop:
+                        chosen = agent
+                        override = per_map.get((map_name or "").lower())
+                        if override:
+                            resolved = resolve_agent(override)
+                            if resolved:
+                                chosen = resolved
+                        agent_id = chosen["uuid"]
+                        auth.glz_post(f"/pregame/v1/matches/{mid}/select/{agent_id}")
+                        if mode == "lock":
+                            auth.glz_post(f"/pregame/v1/matches/{mid}/lock/{agent_id}")
+                        done.add(mid)
+                        self.state.update(
+                            running=False, status="locked", side=side,
+                            agent=chosen["name"], map=map_name,
+                            message=f"{'Locked' if mode == 'lock' else 'Hovered'} "
+                                    f"{chosen['name']}"
+                                    + (f" on {map_name}" if map_name and map_name != "Unknown" else "")
+                                    + "!"
+                                    + (f"  You're {side}." if side else ""))
                         return
 
                 elif st is None:
-                    self.state.update(
-                        running=True, status="waiting",
-                        message="En attente de VALORANT et de la sélection des agents…")
+                    self.state.update(running=False, status="error",
+                                      message="Local client not reachable — is VALORANT open?")
+                    return
                 if self._stop.wait(1.0):
                     break
-            except Exception as error:
-                auth = None
-                self.state.update(
-                    running=True, status="waiting",
-                    message="Connexion au client local en attente…")
+            except Exception:
+                try:
+                    auth.headers(refresh=True)
+                except Exception:
+                    pass
                 if self._stop.wait(1.5):
                     break
 
         self.state.update(running=False)
         if self.state.get("status") not in ("locked", "error"):
-            self.state.update(status="stopped", message="Instalock arrêté.")
+            self.state.update(status="stopped", message="Stopped.")

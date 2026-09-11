@@ -17,7 +17,7 @@ function Bad([string]$line) { $script:exitCode = 1; DiagLine "[X] $line" }
 function Good([string]$line) { DiagLine "[OK] $line" }
 
 Write-Host ""
-Write-Host "  ZERWYX TRACKER - DIAGNOSTICS" -ForegroundColor Red
+Write-Host "  VALORANT SCOUT - DIAGNOSTICS" -ForegroundColor Red
 
 
 RSection "App"
@@ -116,11 +116,11 @@ function Get-PortOwner([int]$port) {
 
             if ($exe) {
                 $exeLower = $exe.ToLower()
-                if ($exeLower -eq $rootLower -or $exeLower.StartsWith($rootLower + '\')) { return "ours (ZeRwYX Tracker, PID $portPid)" }
+                if ($exeLower -eq $rootLower -or $exeLower.StartsWith($rootLower + '\')) { return "ours (Valorant Scout, PID $portPid)" }
             }
             if ($proc.CommandLine) {
                 $cmdLower = $proc.CommandLine.ToLower()
-                if ($cmdLower -eq $rootLower -or $cmdLower.Contains($rootLower + '\')) { return "ours (ZeRwYX Tracker, PID $portPid)" }
+                if ($cmdLower -eq $rootLower -or $cmdLower.Contains($rootLower + '\')) { return "ours (Valorant Scout, PID $portPid)" }
             }
             return "foreign: $(Split-Path -Leaf ($exe + '')) (PID $portPid)"
         } catch { return "unknown process (PID $portPid)" }
@@ -159,7 +159,7 @@ RSection "Running app"
 try {
     $h = Invoke-RestMethod -Uri "http://127.0.0.1:$backendPort/api/health" -TimeoutSec 3
     if ($h.service -ne "valorant-scout") {
-        Bad "port $backendPort answered, but it is not ZeRwYX Tracker"
+        Bad "port $backendPort answered, but it is not Valorant Scout"
     } elseif (-not $h.wsReady -or [int]$h.wsPort -ne $wsPort) {
         Bad "backend is up but its authenticated WebSocket self-check is not ready"
     } else {
@@ -168,7 +168,7 @@ try {
 } catch { DiagLine "backend: not running (start it with start.bat)" }
 
 
-RSection "Riot"
+RSection "Riot & Discord"
 $lockfile = Join-Path $env:LOCALAPPDATA "Riot Games\Riot Client\Config\lockfile"
 if (Test-Path $lockfile) {
     try {
@@ -181,6 +181,11 @@ if (Test-Path $lockfile) {
 } else {
     DiagLine "Riot lockfile: not found (VALORANT/Riot Client not running - live data needs the game open)"
 }
+$discord = $false
+foreach ($i in 0..3) { if (Test-Path "\\.\pipe\discord-ipc-$i") { $discord = $true; break } }
+DiagLine "Discord desktop: $(if ($discord) { 'running (Rich Presence possible)' } else { 'not detected (Rich Presence off)' })"
+
+
 RSection "Network"
 $frontend = "https://valorantscout.com"
 if (Test-Path $EnvFile) {

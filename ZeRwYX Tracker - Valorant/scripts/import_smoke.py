@@ -8,6 +8,7 @@ REQUIRED = [
     "dotenv",
     "urllib3",
     "rich",
+    "pypresence",
     "websockets",
     "websockets.sync.client",
     "ably",

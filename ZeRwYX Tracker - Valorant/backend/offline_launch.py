@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import base64
 import codecs
-import html
 import json
 import os
 import ssl
@@ -87,19 +86,12 @@ def _reset_log() -> None:
 
 _VALID_STATUS = ("online", "offline", "away", "mobile")
 _DEFAULT_STATUS = "offline"
-_CUSTOM_GAME_TEAMS = {
-    "TeamOne": "Équipe 1",
-    "TeamTwo": "Équipe 2",
-    "TeamSpectate": "Spectateur",
-    "TeamOneCoaches": "Coach de l'équipe 1",
-    "TeamTwoCoaches": "Coach de l'équipe 2",
-}
 _STATUS_PATH = os.path.join(
     os.getenv("LOCALAPPDATA", os.path.expanduser("~")),
     "ValorantScout", "offline", "status",
 )
 
-_HELPER_PROTOCOL = 3
+_HELPER_PROTOCOL = 1
 _HELPER_MODE = os.getenv("VALORANT_SCOUT_OFFLINE_HELPER") == "1"
 _HELPER_STATE_PATH = os.getenv(
     "SCOUT_OFFLINE_HELPER_STATE",
@@ -134,10 +126,10 @@ def _roster_name(status: str) -> str:
 
 def _status_line(status: str) -> str:
     return {
-        "online": "Le relais est en pause : tu apparais maintenant EN LIGNE.",
-        "offline": "Tu apparais maintenant HORS LIGNE à tes amis.",
-        "away": "Tu apparais maintenant ABSENT à tes amis.",
-        "mobile": "Tu apparais maintenant SUR MOBILE à tes amis.",
+        "online": "Valorant Scout paused — you're now appearing ONLINE again.",
+        "offline": "You're now appearing OFFLINE to your friends.",
+        "away": "You're now appearing AWAY (idle) to your friends.",
+        "mobile": "You're now appearing on MOBILE to your friends.",
     }.get(status, f"You're now appearing {status}.")
 
 _RIOT_PROCS = [
@@ -228,40 +220,27 @@ def _pending_prefix(buf: str, i: int) -> str:
 
 _FAKE_PUUID = "5ca07a5c-0ff1-4c0d-9e00-000000000001"
 _FAKE_JID = f"{_FAKE_PUUID}@eu1.pvp.net"
-_FAKE_RES = "RC-ZeRwYX"
+_FAKE_RES = "RC-Scout"
 
 _ROSTER_MARKER = b"<query xmlns='jabber:iq:riotgames:roster'>"
 
 _FAKE_ROSTER_ITEM = (
-    f"<item jid='{_FAKE_JID}' name='&#9;Assistant local' subscription='both' puuid='{_FAKE_PUUID}'>"
-    "<group priority='9999'>Assistant local</group>"
+    f"<item jid='{_FAKE_JID}' name='&#9;Valorant Scout Active' subscription='both' puuid='{_FAKE_PUUID}'>"
+    "<group priority='9999'>Valorant Scout</group>"
     "<state>online</state>"
-    "<id name='&#9;Assistant local' tagline='HORS LIGNE'/>"
-    "<lol name='&#9;Assistant local'/>"
-    "<platforms><riot name='&#9;Assistant local' tagline='HORS LIGNE'/></platforms>"
+    "<id name='&#9;Valorant Scout Active' tagline='OFFLINE'/>"
+    "<lol name='&#9;Valorant Scout Active'/>"
+    "<platforms><riot name='&#9;Valorant Scout Active' tagline='OFFLINE'/></platforms>"
     "</item>"
 ).encode("utf-8")
 
 
-def _player_roster_item(player_name: str) -> bytes:
-    name = html.escape(player_name or "Joueur", quote=True)
-    return (
-        f"<item jid='{_FAKE_JID}' name='&#9;{name}' subscription='both' puuid='{_FAKE_PUUID}'>"
-        "<group priority='9999'>Assistant local</group>"
-        "<state>online</state>"
-        f"<id name='&#9;{name}' tagline='HORS LIGNE'/>"
-        f"<lol name='&#9;{name}'/>"
-        f"<platforms><riot name='&#9;{name}' tagline='HORS LIGNE'/></platforms>"
-        "</item>"
-    ).encode("utf-8")
-
-
-def inject_fake_roster(data: bytes, player_name: str = "Assistant local") -> bytes | None:
+def inject_fake_roster(data: bytes) -> bytes | None:
     idx = data.find(_ROSTER_MARKER)
     if idx == -1:
         return None
     pos = idx + len(_ROSTER_MARKER)
-    return data[:pos] + _player_roster_item(player_name) + data[pos:]
+    return data[:pos] + _FAKE_ROSTER_ITEM + data[pos:]
 
 
 def strip_fake_stanzas(text: str) -> str:
@@ -309,22 +288,8 @@ def _extract_valorant_private(text: str) -> dict | None:
         return None
 
 
-def _extract_player_name(text: str) -> str | None:
-    for tag in ("id", "riot"):
-        match = re.search(rf"<{tag}\b[^>]*\bname=['\"]([^'\"]+)['\"]",
-                          text or "", re.IGNORECASE)
-        if not match:
-            continue
-        name = html.unescape(match.group(1)).replace("&#9;", "").strip()
-        if name and name.lower() != "assistant local":
-            return name
-    return None
-
-
 def _fake_presence(version: str | None = None,
-                   status: str = _DEFAULT_STATUS,
-                   player_name: str = "Assistant local",
-                   custom_game_team: str = "TeamSpectate") -> bytes:
+                   status: str = _DEFAULT_STATUS) -> bytes:
     ts = int(time.time() * 1000)
     val = base64.b64encode(json.dumps({
         "isValid": True, "isIdle": False, "queueId": "competitive",
@@ -335,7 +300,7 @@ def _fake_presence(version: str | None = None,
         "premierPresenceData": {
             "rosterId": "",
             "rosterName": _roster_name(status),
-            "rosterTag": "ZeRwYX Tracker actif", "rosterType": "VCT",
+            "rosterTag": "Scout Active", "rosterType": "VCT",
             "division": 0, "score": 0, "plating": 0,
             "showAura": False, "showTag": True, "showPlating": False,
         },
@@ -353,7 +318,7 @@ def _fake_presence(version: str | None = None,
             "queueEntryTime": "0001.01.01-00.00.00",
             "isPartyCrossPlayEnabled": False, "isPlayerCrossPlayEnabled": False,
             "partyPrecisePlatformTypes": 1,
-            "customGameName": player_name, "customGameTeam": custom_game_team,
+            "customGameName": "Valorant Scout Active", "customGameTeam": "",
             "tournamentId": "", "rosterId": "",
             "partyOwnerSessionLoopState": "MENUS",
             "partyOwnerMatchMap": "", "partyOwnerProvisioningFlow": "Invalid",
@@ -382,18 +347,11 @@ def _fake_presence(version: str | None = None,
     ).encode("utf-8")
 
 
-def _fake_message(text: str, nickname: str | None = None,
-                  channel: str = "private") -> bytes:
-    text = html.escape(str(text), quote=False)
+def _fake_message(text: str) -> bytes:
     stamp = time.strftime("%Y-%m-%d %H:%M:%S.000", time.gmtime())
-    message_type = "chat" if channel == "private" else "groupchat"
-    sender = _FAKE_JID
-    if nickname:
-        safe_name = re.sub(r"[^A-Za-z0-9_.-]", "", str(nickname))[:32] or "Joueur"
-        sender = f"{safe_name}@eu1.pvp.net/{_FAKE_RES}"
     return (
-        f"<message from='{sender}' stamp='{stamp}' "
-        f"id='zerwyx-{uuid.uuid4()}' type='{message_type}'><body>{text}</body></message>"
+        f"<message from='{_FAKE_JID}/{_FAKE_RES}' stamp='{stamp}' "
+        f"id='scout-{uuid.uuid4()}' type='chat'><body>{text}</body></message>"
     ).encode("utf-8")
 
 
@@ -513,10 +471,9 @@ class _Target:
 
 
 class _Conn:
-    def __init__(self, client_writer, up_writer, engine=None):
+    def __init__(self, client_writer, up_writer):
         self.client_writer = client_writer
         self.up_writer = up_writer
-        self.engine = engine
         self.version: str | None = None
         self.inserted = False
         self.presence_sent = False
@@ -526,9 +483,6 @@ class _Conn:
 
     def capture(self, raw: str) -> None:
         self.last_presence = raw
-        detected_name = _extract_player_name(raw)
-        if detected_name and self.engine is not None:
-            self.engine.player_name = detected_name
         private = _extract_valorant_private(raw)
         if private:
             self.last_private = private
@@ -547,9 +501,6 @@ class _Engine:
         self.connected = False
         self.friends_loaded = False
         self._conns: list[_Conn] = []
-        self._pending_messages: list[tuple[str, str, str, str]] = []
-        self.player_name = "Joueur local"
-        self.custom_game_team = "TeamSpectate"
 
 
     def start(self):
@@ -607,7 +558,7 @@ class _Engine:
         if not self._conns:
             self.friends_loaded = False
         self.connected = True
-        conn = _Conn(c_writer, u_writer, self)
+        conn = _Conn(c_writer, u_writer)
         self._conns.append(conn)
         try:
             results = await asyncio.gather(
@@ -666,14 +617,13 @@ class _Engine:
             if not data:
                 break
             if not conn.inserted:
-                hacked = inject_fake_roster(data, self.player_name)
+                hacked = inject_fake_roster(data)
                 if hacked is not None:
                     conn.inserted = True
                     self.friends_loaded = True
                     writer.write(hacked)
                     await writer.drain()
-                    _dbg("s2c: ami local injecté", echo=True)
-                    await self._flush_pending(conn)
+                    _dbg("s2c: injected fake 'Valorant Scout Active' friend", echo=True)
                     asyncio.create_task(self._greet_later(conn))
                     continue
             writer.write(data)
@@ -682,9 +632,7 @@ class _Engine:
     async def _send_fake_presence(self, conn):
         conn.presence_sent = True
         try:
-            conn.client_writer.write(_fake_presence(
-                conn.version, self.status, self.player_name,
-                self.custom_game_team))
+            conn.client_writer.write(_fake_presence(conn.version, self.status))
             await conn.client_writer.drain()
         except Exception:
             pass
@@ -693,8 +641,9 @@ class _Engine:
         try:
             await asyncio.sleep(6)
             conn.client_writer.write(_fake_message(
-                f"Le relais est actif : tes amis te voient comme {self.status.upper()}. "
-                "Écris « en ligne », « hors ligne », « absent » ou « mobile » pour changer ton statut."))
+                f"Valorant Scout is active — friends see you as {self.status.upper()}. "
+                "Message me 'online', 'offline', 'away' or 'mobile' to switch "
+                "anytime (or use the Scout app / website)."))
             await conn.client_writer.drain()
         except Exception:
             pass
@@ -703,7 +652,7 @@ class _Engine:
     def set_status(self, status: str) -> dict:
         status = (status or "").strip().lower()
         if status not in _VALID_STATUS:
-            return {"ok": False, "message": f"Statut inconnu : « {status} »."}
+            return {"ok": False, "message": f"Unknown status '{status}'."}
         self.status = status
         _save_status(status)
         _dbg(f"status: -> {status}")
@@ -730,70 +679,11 @@ class _Engine:
                 conn.up_writer.write(payload.encode("utf-8"))
                 await conn.up_writer.drain()
             if conn.presence_sent:
-                conn.client_writer.write(_fake_presence(
-                    conn.version, self.status, self.player_name,
-                    self.custom_game_team))
+                conn.client_writer.write(_fake_presence(conn.version, self.status))
             conn.client_writer.write(_fake_message(_status_line(self.status)))
             await conn.client_writer.drain()
         except Exception:
             pass
-
-    async def _flush_pending(self, conn):
-        with self._lock:
-            pending = list(self._pending_messages)
-            self._pending_messages.clear()
-        for nickname, text, channel, custom_game_team in pending:
-            self.custom_game_team = custom_game_team
-            conn.client_writer.write(_fake_presence(
-                conn.version, self.status, self.player_name,
-                self.custom_game_team))
-            conn.client_writer.write(_fake_message(text, nickname, channel))
-        if pending:
-            await conn.client_writer.drain()
-
-    def send_fake_message(self, nickname: str, text: str, channel: str = "all",
-                          custom_game_team: str = "TeamSpectate") -> dict:
-        nickname = str(nickname or "Joueur").strip()[:32]
-        text = str(text or "").strip()[:250]
-        channel = str(channel or "all").strip().lower()
-        message_types = {"all": "groupchat", "team": "groupchat", "private": "chat"}
-        if channel not in message_types:
-            return {"ok": False, "message": "Canal de chat inconnu."}
-        if custom_game_team not in _CUSTOM_GAME_TEAMS:
-            return {"ok": False, "message": "Équipe de présence inconnue."}
-        if not text:
-            return {"ok": False, "message": "Le texte du message est vide."}
-        self.custom_game_team = custom_game_team
-        if not self.started:
-            return {"ok": False, "needsRelay": True,
-                    "message": "Le relais est arrêté. Active-le avant d’envoyer un message."}
-        if not self._conns:
-            with self._lock:
-                self._pending_messages.append((nickname, text, channel, custom_game_team))
-                return {"ok": False, "queued": True, "channel": channel,
-                    "message": "Message mis en attente : il sera envoyé quand VALORANT sera connecté au relais."}
-        payload = _fake_message(text, nickname, channel)
-        sent = 0
-        if self._loop is not None:
-            for conn in list(self._conns):
-                try:
-                    async def deliver(target=conn.client_writer,
-                                      version=conn.version,
-                                      status=self.status,
-                                      player_name=self.player_name,
-                                      team=self.custom_game_team):
-                        target.write(_fake_presence(
-                            version, status, player_name, team))
-                        target.write(payload)
-                        await target.drain()
-                    future = asyncio.run_coroutine_threadsafe(deliver(), self._loop)
-                    future.result(timeout=5)
-                    sent += 1
-                except Exception:
-                    pass
-        return {"ok": sent > 0, "channel": channel, "sent": sent,
-                "message": "Message livré au client VALORANT." if sent else
-                           "Aucune connexion VALORANT active dans le relais."}
 
     async def _handle_fake_command(self, chunk: str, conn):
         m = re.search(r"<body>(.*?)</body>", chunk, re.DOTALL)
@@ -805,11 +695,11 @@ class _Engine:
                 self.set_status(kw)
                 return
         if "status" in body:
-            reply = f"Tu apparais actuellement comme {self.status.upper()}."
+            reply = f"You're currently appearing {self.status.upper()}."
         elif "help" in body:
-            reply = "Commandes : en ligne / hors ligne / absent / mobile / statut / aide"
+            reply = "Commands: online / offline / away / mobile / status / help"
         else:
-            reply = "Commande inconnue. Essaie : en ligne / hors ligne / absent / mobile / statut / aide"
+            reply = "Didn't catch that. Try: online / offline / away / mobile / status / help"
         try:
             conn.client_writer.write(_fake_message(reply))
             await conn.client_writer.drain()
@@ -1133,11 +1023,6 @@ def _helper_main() -> int:
                     result = _set_status_local(str(payload.get("status") or ""))
                 elif command == "set_enabled":
                     result = _set_enabled_local(bool(payload.get("enabled", True)))
-                elif command == "fake_message":
-                    result = _engine.send_fake_message(
-                        payload.get("nickname"), payload.get("text"),
-                        payload.get("channel", "all"),
-                        payload.get("customGameTeam", "TeamSpectate"))
                 elif command == "presence":
                     result = {"private": _captured_presence_private_local()}
                 elif command == "shutdown":
@@ -1258,19 +1143,6 @@ def set_enabled(enabled: bool) -> dict:
     return _set_enabled_local(enabled)
 
 
-def send_fake_message(nickname: str, text: str, channel: str = "all",
-                      custom_game_team: str = "TeamSpectate") -> dict:
-    if not _HELPER_MODE:
-        if not _ensure_helper():
-            return {"ok": False, "message": "Impossible de démarrer le relais offline local."}
-        remote = _helper_request("fake_message", {
-            "nickname": nickname, "text": text, "channel": channel,
-            "customGameTeam": custom_game_team})
-        if remote is not None:
-            return remote
-    return _engine.send_fake_message(nickname, text, channel, custom_game_team)
-
-
 def _set_status_local(status_: str) -> dict:
     if not _engine.started:
         return {"ok": False, "message": "Offline mode isn't running."}
@@ -1370,8 +1242,8 @@ if __name__ == "__main__":
               b"<item jid='real@pvp.net'/></query></iq>")
     hacked = inject_fake_roster(roster)
     assert hacked is not None
-    assert b"Assistant local" in hacked
-    assert hacked.index(b"Assistant local") < hacked.index(b"real@pvp.net")
+    assert b"Valorant Scout Active" in hacked
+    assert hacked.index(b"Valorant Scout Active") < hacked.index(b"real@pvp.net")
     assert inject_fake_roster(b"<iq><nothing/></iq>") is None
 
     ver_blob = base64.b64encode(json.dumps(

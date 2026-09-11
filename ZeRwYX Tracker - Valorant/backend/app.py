@@ -14,6 +14,7 @@ try:
 except Exception:
     pass
 
+import discord_presence
 import encounter_log
 import scoutlog
 import sync
@@ -149,7 +150,7 @@ def health():
     import ws_server as _ws
     return jsonify({
         "ok": True,
-        "service": "zerwyx-tracker",
+        "service": "valorant-scout",
         "appVersion": APP_VERSION,
         "protocol": _ws.PROTOCOL_VERSION,
         "wsReady": _ws.is_ready(),
@@ -609,15 +610,6 @@ def dodge():
                           region=body.get("region"))
     return jsonify(result), (200 if result.get("ok") else 400)
 
-@app.post("/api/fake-message")
-def fake_message():
-    import offline_launch
-    body = request.get_json(silent=True) or {}
-    result = offline_launch.send_fake_message(
-        body.get("nickname", "Assistant local"), body.get("text", ""),
-        body.get("channel", "all"), body.get("customGameTeam", "TeamSpectate"))
-    return jsonify(result), (200 if result.get("ok") else 400)
-
 @app.post("/api/launch-offline")
 def launch_offline():
     import offline_launch
@@ -683,11 +675,10 @@ def instalock_start():
     body = request.get_json(silent=True) or {}
     agent = body.get("agent")
     mode = (body.get("mode") or "lock").lower()
-    delay = body.get("delay", 5)
+    delay = body.get("delay", 0)
     dry_run = bool(body.get("dryRun", True))
     region = body.get("region")
     per_map = body.get("perMap") if isinstance(body.get("perMap"), dict) else None
-    loop = bool(body.get("loop", False))
     if not agent:
         return jsonify({"ok": False, "message": "Field 'agent' is required."}), 400
     if dry_run:
@@ -704,7 +695,7 @@ def instalock_start():
                                    f"overrides applied) when agent select starts. "
                                    f"Turn dry-run OFF to auto-lock."})
     result = instalock_worker.start(agent, mode=mode, delay=delay, region=region,
-                                    per_map=per_map, loop=loop)
+                                    per_map=per_map)
     return jsonify(result), (200 if result.get("ok") else 400)
 
 @app.post("/api/instalock/stop")
@@ -718,7 +709,7 @@ def instalock_status():
 @app.get("/")
 def index():
     return jsonify({
-        "service": "ZeRwYX Tracker API",
+        "service": "Valorant Scout API",
         "endpoints": ["/api/health", "/api/live", "/api/profile/<puuid>", "/api/agents",
                       "/api/instalock/start", "/api/settings", "/api/encounters"],
     })
@@ -876,11 +867,12 @@ def _write_bridge_file(ws_port: int, token: str) -> None:
 if __name__ == "__main__":
     port = int(os.getenv("BACKEND_PORT", os.getenv("PORT", "5000")))
     debug = os.getenv("FLASK_DEBUG", "false").lower() == "true"
+    discord_presence.maybe_start()
     sync.maybe_start()
 
     if not debug or os.getenv("WERKZEUG_RUN_MAIN") == "true":
         _start_ws_bridge()
-    print(f"[app] ZeRwYX Tracker API on http://127.0.0.1:{port}  "
+    print(f"[app] Valorant Scout API on http://127.0.0.1:{port}  "
           f"(source={client.source_pref}, key={'set' if client.api_key else 'unset'})",
           flush=True)
     try:
