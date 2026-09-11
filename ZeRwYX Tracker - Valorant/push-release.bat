@@ -63,6 +63,16 @@ if /i not "%CONFIRM%"=="O" if /i not "%CONFIRM%"=="Y" (
 git add -A
 if errorlevel 1 goto :failed
 
+if exist ".git\MERGE_HEAD" (
+    echo Merge en attente detecte; finalisation du merge...
+    git commit -m "Merge remote main and resolve release version"
+    if errorlevel 1 (
+        echo Le merge contient encore des conflits non resolus.
+        echo Ouvre VS Code, resous les fichiers marques en conflit, puis relance ce batch.
+        goto :failed
+    )
+)
+
 git diff --cached --quiet
 if not errorlevel 1 (
     echo Aucun changement a committer.
