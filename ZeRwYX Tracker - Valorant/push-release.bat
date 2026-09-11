@@ -82,15 +82,26 @@ if not exist "dist\valorant-scout-v%VERSION%.zip" (
 
 git rev-parse "v%VERSION%" >nul 2>&1
 if not errorlevel 1 (
-    echo Le tag v%VERSION% existe deja localement.
-    goto :failed
+    echo Le tag v%VERSION% existe deja localement; conservation du tag existant.
+) else (
+    git tag -a "v%VERSION%" -m "Release v%VERSION%"
+    if errorlevel 1 goto :failed
 )
 
-git tag -a "v%VERSION%" -m "Release v%VERSION%"
-if errorlevel 1 goto :failed
-
-git push origin HEAD --follow-tags
-if errorlevel 1 goto :failed
+git push origin HEAD:main --follow-tags
+if errorlevel 1 (
+    echo La branche distante contient des commits supplementaires.
+    echo Recuperation et fusion du travail distant...
+    git fetch origin
+    if errorlevel 1 goto :failed
+    git pull --no-edit --no-rebase origin main
+    if errorlevel 1 (
+        echo Conflit de fusion. Resous-le dans Git, puis relance ce batch.
+        goto :failed
+    )
+    git push origin HEAD:main --follow-tags
+    if errorlevel 1 goto :failed
+)
 
 echo.
 echo Commit, archive et tag v%VERSION% pousses avec succes.
