@@ -32,6 +32,24 @@ Write-Host ""
 Write-ScoutLog -Log launcher -Message "startup requested (v$(Get-LocalVersion))"
 
 
+$markerPath = Join-Path $ScoutDir "installed.json"
+if (Test-Path $markerPath) {
+    try {
+        $markerVersion = [string]((Get-Content $markerPath -Raw -Encoding UTF8 | ConvertFrom-Json).version)
+        if ($markerVersion -and (Compare-ScoutVersion $markerVersion (Get-LocalVersion)) -gt 0) {
+            Write-Host "  Installation incomplete (v$markerVersion marker / v$(Get-LocalVersion) files); retrying the update..." -ForegroundColor Yellow
+            Write-ScoutLog -Log launcher -Level WARN -Code VS-UPDATE-003 -Message "marker version $markerVersion is ahead of app version $(Get-LocalVersion); retrying update before startup"
+            & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot "update.ps1")
+            if ($LASTEXITCODE -ne 0) {
+                Write-ScoutLog -Log launcher -Level ERROR -Code VS-UPDATE-003 -Message "incomplete-update recovery failed (rc=$LASTEXITCODE)"
+            }
+        }
+    } catch {
+        Write-ScoutLog -Log launcher -Level WARN -Code VS-UPDATE-003 -Message "could not inspect installation marker: $($_.Exception.Message)"
+    }
+}
+
+
 Show-Phase 1 "Checking your installation..."
 $markers = Test-Markers
 if (-not $markers.Ok) {

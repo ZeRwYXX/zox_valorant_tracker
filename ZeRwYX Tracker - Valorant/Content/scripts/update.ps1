@@ -137,7 +137,15 @@ try {
         }
     }
 
-    if (-not (Is-Installed)) {
+    $markerAhead = $false
+    $markerPath = Join-Path $ScoutDir "installed.json"
+    if (Test-Path $markerPath) {
+        try {
+            $markerVersion = [string]((Get-Content $markerPath -Raw -Encoding UTF8 | ConvertFrom-Json).version)
+            $markerAhead = $markerVersion -and (Compare-ScoutVersion $markerVersion (Get-LocalVersion)) -gt 0
+        } catch { }
+    }
+    if (-not (Is-Installed) -and -not $markerAhead) {
         Warn2 "Not set up yet - run install.bat first."
         exit 1
     }
@@ -235,6 +243,15 @@ try {
     }
     if ((Get-Content (Join-Path $newRoot "VERSION") -Raw).Trim() -ne $newVersion) {
         throw "the downloaded release's VERSION does not match v$newVersion."
+    }
+    $stagedRun = Join-Path $newRoot "run.py"
+    if (Test-Path $stagedRun) {
+        $runText = Get-Content $stagedRun -Raw -Encoding UTF8
+        if ($runText -match "APP_VERSION" -and $runText -notmatch "from\s+vconstants\s+import\s+APP_VERSION") {
+            $runText = [regex]::Replace($runText, '(?m)^(sys\.path\.insert\(0, str\(BACKEND\)\)\r?\n)', '${1}from vconstants import APP_VERSION' + [Environment]::NewLine)
+            Write-FileNoBom $stagedRun $runText
+            Write-ScoutLog -Log update -Level WARN -Code VS-UPDATE-002 -Message "repaired missing APP_VERSION import in downloaded run.py"
+        }
     }
     $newRuntime = Get-Content (Join-Path $newRoot "runtime.json") -Raw -Encoding UTF8 | ConvertFrom-Json
     $newReqHash = (Get-FileHash -Algorithm SHA256 -Path (Join-Path $newRoot "backend\requirements.txt")).Hash.ToLowerInvariant()
@@ -368,7 +385,7 @@ try {
                 if ($proc.HasExited) { break }
                 try {
                     $r = Invoke-RestMethod -Uri "http://127.0.0.1:$bport/api/health" -TimeoutSec 2
-                    if ($r.ok -and $r.service -eq "valorant-scout" -and $r.wsReady -and
+                    if ($r.ok -and $r.service -in @("valorant-scout", "zerwyx-tracker") -and $r.wsReady -and
                             [int]$r.wsPort -eq $wport) { $healthy = $true; break }
                 } catch { Start-Sleep -Milliseconds 700 }
             }
