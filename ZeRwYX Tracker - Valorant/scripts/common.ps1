@@ -4,7 +4,7 @@ $ProgressPreference = "SilentlyContinue"
 [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
 
 $Root     = Split-Path -Parent $PSScriptRoot
-$Repo     = "kryotrades/valorant-scout"
+$Repo     = "ZeRwYXX/zox_valorant_tracker"
 $VenvDir  = Join-Path $Root ".venv"
 $VenvPy   = Join-Path $VenvDir "Scripts\python.exe"
 $ScoutDir = Join-Path $Root ".scout"
