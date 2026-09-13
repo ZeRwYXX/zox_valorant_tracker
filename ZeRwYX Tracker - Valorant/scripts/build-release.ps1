@@ -48,7 +48,7 @@ if ($mf.app.version -ne $Version) { Fail-Build "runtime.json app.version is '$($
 
 $commit = (& git -C $Root rev-parse HEAD).Trim()
 if ($LASTEXITCODE -ne 0 -or $commit.Length -ne 40) { Fail-Build "couldn't resolve the git commit." }
-$dirty = [bool](& git -C $Root status --porcelain)
+$dirty = [bool](& git -C $Root status --porcelain -- .)
 if ($dirty -and -not $AllowDirty) {
     Fail-Build "working tree is dirty. Commit/stash changes before a release build, or use -AllowDirty only for local testing."
 }
