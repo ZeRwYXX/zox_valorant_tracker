@@ -126,7 +126,7 @@ def _roster_name(status: str) -> str:
 
 def _status_line(status: str) -> str:
     return {
-        "online": "Valorant Scout paused — you're now appearing ONLINE again.",
+        "online": "ZeRwYX Tracker paused — you're now appearing ONLINE again.",
         "offline": "You're now appearing OFFLINE to your friends.",
         "away": "You're now appearing AWAY (idle) to your friends.",
         "mobile": "You're now appearing on MOBILE to your friends.",
@@ -225,12 +225,12 @@ _FAKE_RES = "RC-Scout"
 _ROSTER_MARKER = b"<query xmlns='jabber:iq:riotgames:roster'>"
 
 _FAKE_ROSTER_ITEM = (
-    f"<item jid='{_FAKE_JID}' name='&#9;Valorant Scout Active' subscription='both' puuid='{_FAKE_PUUID}'>"
-    "<group priority='9999'>Valorant Scout</group>"
+    f"<item jid='{_FAKE_JID}' name='&#9;ZeRwYX Tracker Active' subscription='both' puuid='{_FAKE_PUUID}'>"
+    "<group priority='9999'>ZeRwYX Tracker</group>"
     "<state>online</state>"
-    "<id name='&#9;Valorant Scout Active' tagline='OFFLINE'/>"
-    "<lol name='&#9;Valorant Scout Active'/>"
-    "<platforms><riot name='&#9;Valorant Scout Active' tagline='OFFLINE'/></platforms>"
+    "<id name='&#9;ZeRwYX Tracker Active' tagline='OFFLINE'/>"
+    "<lol name='&#9;ZeRwYX Tracker Active'/>"
+    "<platforms><riot name='&#9;ZeRwYX Tracker Active' tagline='OFFLINE'/></platforms>"
     "</item>"
 ).encode("utf-8")
 
@@ -318,7 +318,7 @@ def _fake_presence(version: str | None = None,
             "queueEntryTime": "0001.01.01-00.00.00",
             "isPartyCrossPlayEnabled": False, "isPlayerCrossPlayEnabled": False,
             "partyPrecisePlatformTypes": 1,
-            "customGameName": "Valorant Scout Active", "customGameTeam": "",
+            "customGameName": "ZeRwYX Tracker Active", "customGameTeam": "",
             "tournamentId": "", "rosterId": "",
             "partyOwnerSessionLoopState": "MENUS",
             "partyOwnerMatchMap": "", "partyOwnerProvisioningFlow": "Invalid",
@@ -623,7 +623,7 @@ class _Engine:
                     self.friends_loaded = True
                     writer.write(hacked)
                     await writer.drain()
-                    _dbg("s2c: injected fake 'Valorant Scout Active' friend", echo=True)
+                    _dbg("s2c: injected fake 'ZeRwYX Tracker Active' friend", echo=True)
                     asyncio.create_task(self._greet_later(conn))
                     continue
             writer.write(data)
@@ -641,7 +641,7 @@ class _Engine:
         try:
             await asyncio.sleep(6)
             conn.client_writer.write(_fake_message(
-                f"Valorant Scout is active — friends see you as {self.status.upper()}. "
+                f"ZeRwYX Tracker is active — friends see you as {self.status.upper()}. "
                 "Message me 'online', 'offline', 'away' or 'mobile' to switch "
                 "anytime (or use the Scout app / website)."))
             await conn.client_writer.drain()
@@ -1242,8 +1242,8 @@ if __name__ == "__main__":
               b"<item jid='real@pvp.net'/></query></iq>")
     hacked = inject_fake_roster(roster)
     assert hacked is not None
-    assert b"Valorant Scout Active" in hacked
-    assert hacked.index(b"Valorant Scout Active") < hacked.index(b"real@pvp.net")
+    assert b"ZeRwYX Tracker Active" in hacked
+    assert hacked.index(b"ZeRwYX Tracker Active") < hacked.index(b"real@pvp.net")
     assert inject_fake_roster(b"<iq><nothing/></iq>") is None
 
     ver_blob = base64.b64encode(json.dumps(

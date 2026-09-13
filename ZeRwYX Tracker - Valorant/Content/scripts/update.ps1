@@ -169,7 +169,7 @@ try {
     if ($LocalAssets) {
         if (-not $ExpectVersion) { throw "-LocalAssets requires -ExpectVersion." }
         $newVersion = $ExpectVersion
-        $zipName  = "valorant-scout-v$newVersion.zip"
+        $zipName  = "zerwyx-tracker-v$newVersion.zip"
         $zip      = Join-Path $LocalAssets $zipName
         if (-not (Test-Path $zip)) { throw "missing local asset: $zip" }
         Note "Using local assets from $LocalAssets (v$newVersion)."
@@ -184,7 +184,7 @@ try {
         }
         Step "Updating v$(Get-LocalVersion) -> v$newVersion ..."
 
-        $zipName = "valorant-scout-v$newVersion.zip"
+        $zipName = "zerwyx-tracker-v$newVersion.zip"
         $zipUrl = $null
         foreach ($a in $rel.assets) { if ($a.name -eq $zipName) { $zipUrl = $a.browser_download_url } }
         if (-not $zipUrl) {
@@ -235,7 +235,7 @@ try {
 
     $newRoot = $extract
     if (-not (Test-Path (Join-Path $newRoot "backend"))) {
-        $inner = Join-Path $extract "valorant-scout-v$newVersion"
+        $inner = Join-Path $extract "zerwyx-tracker-v$newVersion"
         if (Test-Path (Join-Path $inner "backend")) { $newRoot = $inner }
     }
     if (-not (Test-Path (Join-Path $newRoot "backend")) -or -not (Test-Path (Join-Path $newRoot "VERSION"))) {

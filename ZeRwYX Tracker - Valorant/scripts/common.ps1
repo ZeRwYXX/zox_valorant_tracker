@@ -148,7 +148,7 @@ function Show-FatalDialog([string]$message, [string]$logName) {
     $full = "$message`n`nDetails: $(Join-Path $ScoutDir "$logName.log")"
     try {
         Add-Type -AssemblyName System.Windows.Forms
-        [System.Windows.Forms.MessageBox]::Show($full, "Valorant Scout",
+        [System.Windows.Forms.MessageBox]::Show($full, "ZeRwYX Tracker",
             [System.Windows.Forms.MessageBoxButtons]::OK,
             [System.Windows.Forms.MessageBoxIcon]::Error) | Out-Null
     } catch {
@@ -167,7 +167,7 @@ function New-ScoutLock([string]$name) {
         return [System.IO.File]::Open($path, [System.IO.FileMode]::OpenOrCreate,
             [System.IO.FileAccess]::ReadWrite, [System.IO.FileShare]::None)
     } catch {
-        throw "Another Valorant Scout $name operation is already running. Wait for it to finish and try again."
+        throw "Another ZeRwYX Tracker $name operation is already running. Wait for it to finish and try again."
     }
 }
 
@@ -235,7 +235,7 @@ function Stop-RunningApp([string]$LogName = "launcher") {
     }
     if (-not $ours) { return $false }
 
-    Note "Closing the running Valorant Scout (PID $appPid) so we can continue ..."
+    Note "Closing the running ZeRwYX Tracker (PID $appPid) so we can continue ..."
     Write-ScoutLog -Log $LogName -Message "closing running app pid=$appPid before maintenance"
 
 
@@ -293,7 +293,7 @@ function Test-Preflight {
             [System.IO.File]::WriteAllText($t, "x")
             Remove-Item $t -Force
         } catch {
-            $problems += "The folder '$dir' is not writable. Move Valorant Scout to a folder you can write to (e.g. Documents)."
+            $problems += "The folder '$dir' is not writable. Move ZeRwYX Tracker to a folder you can write to (e.g. Documents)."
         }
     }
 
@@ -572,7 +572,7 @@ function Repair-Venv($py) {
         try {
             Remove-Item -Recurse -Force $resolved
         } catch {
-            throw "Couldn't remove the old .venv ($($_.Exception.Message)). Close any running Valorant Scout windows (and any antivirus quarantine on that folder), then run install.bat again."
+            throw "Couldn't remove the old .venv ($($_.Exception.Message)). Close any running ZeRwYX Tracker windows (and any antivirus quarantine on that folder), then run install.bat again."
         }
     } else {
         Step "Creating the Python environment (.venv) ..."
@@ -690,16 +690,16 @@ function Get-SavedRegion {
 
 function New-DesktopShortcut {
     $desktop = [Environment]::GetFolderPath("Desktop")
-    $lnk = Join-Path $desktop "Valorant Scout.lnk"
+    $lnk = Join-Path $desktop "ZeRwYX Tracker.lnk"
     if (Test-Path $lnk) { Note "Desktop shortcut already exists."; return }
     try {
         $ws = New-Object -ComObject WScript.Shell
         $sc = $ws.CreateShortcut($lnk)
         $sc.TargetPath = (Join-Path $Root "start.bat")
         $sc.WorkingDirectory = $Root
-        $ico = Join-Path $Root "assets\valorant-scout.ico"
+        $ico = Join-Path $Root "icons\icon.ico"
         if (Test-Path $ico) { $sc.IconLocation = $ico }
-        $sc.Description = "Launch Valorant Scout"
+        $sc.Description = "Launch ZeRwYX Tracker"
         $sc.Save()
         Ok "Desktop shortcut created - you can drag it onto your taskbar to pin it."
     } catch { Warn2 "Couldn't create the desktop shortcut ($($_.Exception.Message))." }

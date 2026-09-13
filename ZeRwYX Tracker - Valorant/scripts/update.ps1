@@ -113,7 +113,7 @@ function Restore-FromBackup($state) {
 }
 
 Write-Host ""
-Write-Host "  VALORANT SCOUT - UPDATE" -ForegroundColor Red
+Write-Host "  ZERWYX TRACKER - UPDATE" -ForegroundColor Red
 
 $lock = $null
 $maintenanceMutex = $null
@@ -121,9 +121,9 @@ $appMutex = $null
 $staging = $null
 try {
     $lock = New-ScoutLock "update"
-    $maintenanceMutex = New-ScoutMutex "Maintenance" "Another Valorant Scout install/update operation is already running. Wait for it to finish and retry."
+    $maintenanceMutex = New-ScoutMutex "Maintenance" "Another ZeRwYX Tracker install/update operation is already running. Wait for it to finish and retry."
     Stop-RunningApp "update" | Out-Null
-    $appMutex = New-ScoutMutex "App" "Valorant Scout is still running and couldn't be closed automatically. Close the scoreboard window before updating."
+    $appMutex = New-ScoutMutex "App" "ZeRwYX Tracker is still running and couldn't be closed automatically. Close the scoreboard window before updating."
 
 
 
@@ -161,7 +161,7 @@ try {
     if ($LocalAssets) {
         if (-not $ExpectVersion) { throw "-LocalAssets requires -ExpectVersion." }
         $newVersion = $ExpectVersion
-        $zipName  = "valorant-scout-v$newVersion.zip"
+        $zipName  = "zerwyx-tracker-v$newVersion.zip"
         $zip      = Join-Path $LocalAssets $zipName
         if (-not (Test-Path $zip)) { throw "missing local asset: $zip" }
         Note "Using local assets from $LocalAssets (v$newVersion)."
@@ -176,7 +176,7 @@ try {
         }
         Step "Updating v$(Get-LocalVersion) -> v$newVersion ..."
 
-        $zipName = "valorant-scout-v$newVersion.zip"
+        $zipName = "zerwyx-tracker-v$newVersion.zip"
         $zipUrl = $null
         foreach ($a in $rel.assets) { if ($a.name -eq $zipName) { $zipUrl = $a.browser_download_url } }
         if (-not $zipUrl) {
@@ -227,7 +227,7 @@ try {
 
     $newRoot = $extract
     if (-not (Test-Path (Join-Path $newRoot "backend"))) {
-        $inner = Join-Path $extract "valorant-scout-v$newVersion"
+        $inner = Join-Path $extract "zerwyx-tracker-v$newVersion"
         if (Test-Path (Join-Path $inner "backend")) { $newRoot = $inner }
     }
     if (-not (Test-Path (Join-Path $newRoot "backend")) -or -not (Test-Path (Join-Path $newRoot "VERSION"))) {

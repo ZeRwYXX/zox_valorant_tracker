@@ -697,7 +697,7 @@ function New-DesktopShortcut {
         $sc = $ws.CreateShortcut($lnk)
         $sc.TargetPath = (Join-Path $Root "start.bat")
         $sc.WorkingDirectory = $Root
-        $ico = Join-Path $Root "assets\valorant-scout.ico"
+        $ico = Join-Path $Root "icons\icon.ico"
         if (Test-Path $ico) { $sc.IconLocation = $ico }
         $sc.Description = "Launch ZeRwYX Tracker"
         $sc.Save()

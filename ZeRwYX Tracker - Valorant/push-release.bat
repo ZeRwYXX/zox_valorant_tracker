@@ -85,7 +85,7 @@ if not exist "dist" mkdir dist
 powershell -NoProfile -ExecutionPolicy Bypass -File "scripts\build-release.ps1" -Version "%VERSION%" -Output "%CD%\dist"
 if errorlevel 1 goto :failed
 
-if not exist "dist\valorant-scout-v%VERSION%.zip" (
+if not exist "dist\zerwyx-tracker-v%VERSION%.zip" (
     echo L'archive de release est introuvable.
     goto :failed
 )
@@ -115,7 +115,7 @@ if errorlevel 1 (
 
 echo.
 echo Commit, archive et tag v%VERSION% pousses avec succes.
-echo Archive: dist\valorant-scout-v%VERSION%.zip
+echo Archive: dist\zerwyx-tracker-v%VERSION%.zip
 
 where gh >nul 2>&1
 if errorlevel 1 (
@@ -132,7 +132,7 @@ if /i "%CREATE_RELEASE%"=="O" if not exist "release-notes-%VERSION%.md" (
     >>"release-notes-%VERSION%.md" echo Correctifs de mise a jour et validation du backend.
 )
 if /i "%CREATE_RELEASE%"=="O" (
-    gh release create "v%VERSION%" "dist\valorant-scout-v%VERSION%.zip" --title "ZeRwYX Tracker %VERSION%" --notes-file "release-notes-%VERSION%.md"
+    gh release create "v%VERSION%" "dist\zerwyx-tracker-v%VERSION%.zip" --title "ZeRwYX Tracker %VERSION%" --notes-file "release-notes-%VERSION%.md"
     if errorlevel 1 goto :failed
     echo Release GitHub creee.
 )

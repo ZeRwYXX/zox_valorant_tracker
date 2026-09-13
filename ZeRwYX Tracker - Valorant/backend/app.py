@@ -170,6 +170,10 @@ def dashboard():
 def frontend_image(filename):
     return send_from_directory(os.path.join(_FRONTEND_DIR, "images"), filename)
 
+@app.get("/icons/<path:filename>")
+def app_icon(filename):
+    return send_from_directory(os.path.join(os.path.dirname(_FRONTEND_DIR), "icons"), filename)
+
 @app.get("/")
 def dashboard_root():
     return dashboard()
@@ -709,7 +713,7 @@ def instalock_status():
 @app.get("/")
 def index():
     return jsonify({
-        "service": "Valorant Scout API",
+        "service": "ZeRwYX Tracker API",
         "endpoints": ["/api/health", "/api/live", "/api/profile/<puuid>", "/api/agents",
                       "/api/instalock/start", "/api/settings", "/api/encounters"],
     })
@@ -872,7 +876,7 @@ if __name__ == "__main__":
 
     if not debug or os.getenv("WERKZEUG_RUN_MAIN") == "true":
         _start_ws_bridge()
-    print(f"[app] Valorant Scout API on http://127.0.0.1:{port}  "
+    print(f"[app] ZeRwYX Tracker API on http://127.0.0.1:{port}  "
           f"(source={client.source_pref}, key={'set' if client.api_key else 'unset'})",
           flush=True)
     try:

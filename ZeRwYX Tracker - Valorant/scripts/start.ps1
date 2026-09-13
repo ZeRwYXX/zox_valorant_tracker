@@ -53,7 +53,7 @@ $markers = Test-Markers
 if (-not $markers.Ok) {
     Write-Host ""
     Write-ScoutLog -Log launcher -Level ERROR -Code VS-DEPS-001 -Message "startup blocked: $($markers.Reason)"
-    Show-FatalDialog "Valorant Scout can't start: $($markers.Reason).`n`nRun install.bat to repair (your settings and data are kept)." "launcher"
+    Show-FatalDialog "ZeRwYX Tracker can't start: $($markers.Reason).`n`nRun install.bat to repair (your settings and data are kept)." "launcher"
     exit 1
 }
 $venv = Test-Venv -Quick
@@ -64,7 +64,7 @@ if (-not $venv.Ok) {
         if ($r -match 'python|venv') { $code = "VS-PY-001" }
         Write-ScoutLog -Log launcher -Level ERROR -Code $code -Message "startup blocked: $r"
     }
-    Show-FatalDialog "Valorant Scout can't start: $($venv.Reasons[0]).`n`nRun install.bat to repair (your settings and data are kept)." "launcher"
+    Show-FatalDialog "ZeRwYX Tracker can't start: $($venv.Reasons[0]).`n`nRun install.bat to repair (your settings and data are kept)." "launcher"
     exit 1
 }
 
@@ -103,7 +103,7 @@ if (-not (Test-Path (Join-Path $Root ".git"))) {
 }
 
 
-Show-Phase 3 "Starting Valorant Scout..."
+Show-Phase 3 "Starting ZeRwYX Tracker..."
 Stop-RunningApp "launcher" | Out-Null
 
 

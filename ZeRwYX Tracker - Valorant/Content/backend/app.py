@@ -169,6 +169,10 @@ def dashboard():
 def frontend_image(filename):
     return send_from_directory(os.path.join(_FRONTEND_DIR, "images"), filename)
 
+@app.get("/icons/<path:filename>")
+def app_icon(filename):
+    return send_from_directory(os.path.join(os.path.dirname(_FRONTEND_DIR), "icons"), filename)
+
 @app.get("/")
 def dashboard_root():
     return dashboard()

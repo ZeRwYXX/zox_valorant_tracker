@@ -1,12 +1,12 @@
 @echo off
-title Valorant Scout
+title ZeRwYX Tracker
 if not exist "%~dp0.scout\installed.json" goto :notinstalled
 if not exist "%~dp0.venv\Scripts\python.exe" goto :notinstalled
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\start.ps1" & exit /b
 
 :notinstalled
 echo.
-echo   Valorant Scout isn't set up on this PC yet.
+echo   ZeRwYX Tracker isn't set up on this PC yet.
 echo   Run install.bat first (one-time setup), then use start.bat.
 echo.
 pause

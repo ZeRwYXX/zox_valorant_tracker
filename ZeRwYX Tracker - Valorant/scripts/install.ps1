@@ -6,7 +6,7 @@
 . (Join-Path $PSScriptRoot "common.ps1")
 
 Write-Host ""
-Write-Host "  VALORANT SCOUT - SETUP" -ForegroundColor Red
+Write-Host "  ZERWYX TRACKER - SETUP" -ForegroundColor Red
 Write-Host "  Installs (or repairs) everything the app needs. Safe to re-run any time." -ForegroundColor DarkGray
 
 $lock = $null
@@ -14,9 +14,9 @@ $maintenanceMutex = $null
 $appMutex = $null
 try {
     $lock = New-ScoutLock "install"
-    $maintenanceMutex = New-ScoutMutex "Maintenance" "Another Valorant Scout install/update operation is already running. Wait for it to finish and retry."
+    $maintenanceMutex = New-ScoutMutex "Maintenance" "Another ZeRwYX Tracker install/update operation is already running. Wait for it to finish and retry."
     Stop-RunningApp "install" | Out-Null
-    $appMutex = New-ScoutMutex "App" "Valorant Scout is still running and couldn't be closed automatically. Close the scoreboard window, then run install.bat again."
+    $appMutex = New-ScoutMutex "App" "ZeRwYX Tracker is still running and couldn't be closed automatically. Close the scoreboard window, then run install.bat again."
     Write-ScoutLog -Log install -Message "install/repair started (v$(Get-LocalVersion), tree=$(if ($HasFrontend) { 'full' } else { 'slim' }))"
 
     Step "Checking this PC ..."
@@ -97,7 +97,7 @@ try {
 
     Write-Host ""
     Ok "Setup complete!"
-    Write-Host "  Launch the app any time with start.bat (or the Valorant Scout desktop shortcut)." -ForegroundColor Green
+    Write-Host "  Launch the app any time with start.bat (or the ZeRwYX Tracker desktop shortcut)." -ForegroundColor Green
     exit 0
 } catch {
     Write-Host ""

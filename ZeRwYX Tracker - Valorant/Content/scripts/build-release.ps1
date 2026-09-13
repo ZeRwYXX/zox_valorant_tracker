@@ -19,7 +19,7 @@ $AllowExact = @(
     "runtime.json", "install.bat", "start.bat", "UPDATE.bat",
     "run.py", "cli.py"
 )
-$AllowPrefix = @("assets/", "backend/", "docs/", "scripts/")
+$AllowPrefix = @("assets/", "backend/", "docs/", "scripts/", "icons/")
 
 
 $ForbiddenPatterns = @(
@@ -73,7 +73,7 @@ if ($payload.Count -lt 30) { Fail-Build "suspiciously small payload ($($payload.
 Ok "$($payload.Count) files selected."
 
 
-$rootFolder = "valorant-scout-v$Version"
+$rootFolder = "zerwyx-tracker-v$Version"
 $work = Join-Path $env:TEMP ("vs-build-" + [Guid]::NewGuid().ToString("N"))
 $stage = Join-Path $work $rootFolder
 New-Item -ItemType Directory -Path $stage -Force | Out-Null
@@ -151,7 +151,7 @@ try {
 
 
     New-Item -ItemType Directory -Force -Path $Output | Out-Null
-    $zipName = "valorant-scout-v$Version.zip"
+    $zipName = "zerwyx-tracker-v$Version.zip"
     $zipPath = Join-Path $Output $zipName
     if (Test-Path $zipPath) { Remove-Item -Force $zipPath }
     Step "Zipping $zipName ..."
