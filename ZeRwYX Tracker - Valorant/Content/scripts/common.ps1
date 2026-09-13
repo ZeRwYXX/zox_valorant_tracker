@@ -691,8 +691,10 @@ function Get-SavedRegion {
 function New-DesktopShortcut {
     $desktop = [Environment]::GetFolderPath("Desktop")
     $lnk = Join-Path $desktop "ZeRwYX Tracker.lnk"
-    if (Test-Path $lnk) { Note "Desktop shortcut already exists."; return }
+    $legacy = Join-Path $desktop "Valorant Scout.lnk"
     try {
+        if (Test-Path $legacy) { Remove-Item -LiteralPath $legacy -Force -ErrorAction SilentlyContinue }
+        $wasExisting = Test-Path $lnk
         $ws = New-Object -ComObject WScript.Shell
         $sc = $ws.CreateShortcut($lnk)
         $sc.TargetPath = (Join-Path $Root "start.bat")
@@ -701,7 +703,11 @@ function New-DesktopShortcut {
         if (Test-Path $ico) { $sc.IconLocation = $ico }
         $sc.Description = "Launch ZeRwYX Tracker"
         $sc.Save()
-        Ok "Desktop shortcut created - you can drag it onto your taskbar to pin it."
+        if ($wasExisting) {
+            Ok "Desktop shortcut updated with the latest name and icon."
+        } else {
+            Ok "Desktop shortcut created - you can drag it onto your taskbar to pin it."
+        }
     } catch { Warn2 "Couldn't create the desktop shortcut ($($_.Exception.Message))." }
 }
 

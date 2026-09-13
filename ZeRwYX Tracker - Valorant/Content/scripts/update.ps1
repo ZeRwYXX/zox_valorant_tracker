@@ -418,6 +418,7 @@ try {
 
 
         Remove-LegacyCaches
+        New-DesktopShortcut
         Save-Markers (Get-SavedRegion)
         Remove-Item -Force $StateFile -ErrorAction SilentlyContinue
         if ($state.venvBackupDir) {
