@@ -60,7 +60,7 @@ if /i not "%CONFIRM%"=="O" if /i not "%CONFIRM%"=="Y" (
     exit /b 0
 )
 
-git add -A
+git add -A -- .
 if errorlevel 1 goto :failed
 
 if exist ".git\MERGE_HEAD" (

@@ -32,6 +32,22 @@ Write-Host ""
 Write-ScoutLog -Log launcher -Message "startup requested (v$(Get-LocalVersion))"
 
 
+$markerPath = Join-Path $ScoutDir "installed.json"
+if (Test-Path $markerPath) {
+    try {
+        $marker = Get-Content $markerPath -Raw -Encoding UTF8 | ConvertFrom-Json
+        $currentVersion = Get-LocalVersion
+        $requirementsMatch = [string]$marker.requirementsHash -eq (HashOf "backend\requirements.txt")
+        if ([string]$marker.version -ne $currentVersion -and $requirementsMatch -and (Test-Path $VenvPy)) {
+            Save-Markers (Get-SavedRegion)
+            Write-ScoutLog -Log launcher -Message "synchronized stale install marker v$($marker.version) -> v$currentVersion"
+        }
+    } catch {
+        Write-ScoutLog -Log launcher -Level WARN -Code VS-UPDATE-003 -Message "could not synchronize install marker: $($_.Exception.Message)"
+    }
+}
+
+
 Show-Phase 1 "Checking your installation..."
 $markers = Test-Markers
 if (-not $markers.Ok) {

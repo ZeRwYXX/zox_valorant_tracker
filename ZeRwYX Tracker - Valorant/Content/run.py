@@ -30,6 +30,10 @@ except Exception:
     import logging
     LOG = logging.getLogger("launcher")
     LOG.addHandler(logging.NullHandler())
+try:
+    from vconstants import APP_VERSION
+except Exception:
+    APP_VERSION = "unknown"
 
 def has_local_frontend() -> bool:
     requested = "--local-frontend" in sys.argv or os.environ.get(
@@ -588,6 +592,7 @@ def main():
     if not ATTACHED:
         print(f"{C_RED}{'='*58}{C_END}")
         print(f"{C_RED}  ZeRwYX TRACKER{C_END}  {C_DIM}web + terminal · live scoreboard · instalock{C_END}")
+        say(f"Version actuelle : v{APP_VERSION}", C_DIM)
         print(f"{C_RED}{'='*58}{C_END}")
 
     source = os.environ.get("DATA_SOURCE", "auto")

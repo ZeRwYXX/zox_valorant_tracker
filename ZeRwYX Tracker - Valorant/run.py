@@ -24,6 +24,10 @@ HOSTED_FRONTEND = "https://valorantscout.com"
 
 sys.path.insert(0, str(BACKEND))
 try:
+    from vconstants import APP_VERSION
+except Exception:
+    APP_VERSION = "unknown"
+try:
     import scoutlog
     LOG = scoutlog.get_logger("launcher")
 except Exception:
@@ -588,6 +592,7 @@ def main():
     if not ATTACHED:
         print(f"{C_RED}{'='*58}{C_END}")
         print(f"{C_RED}  VALORANT SCOUT{C_END}  {C_DIM}web + terminal · live scoreboard · instalock{C_END}")
+        say(f"Version actuelle : v{APP_VERSION}", C_DIM)
         print(f"{C_RED}{'='*58}{C_END}")
 
     source = os.environ.get("DATA_SOURCE", "auto")

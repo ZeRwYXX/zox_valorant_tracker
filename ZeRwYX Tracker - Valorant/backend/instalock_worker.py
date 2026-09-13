@@ -89,60 +89,60 @@ class InstalockWorker:
 
     def _loop(self, agent: dict, mode: str, delay: float, region, per_map: dict):
         done: set[str] = set()
-        try:
-            auth = LocalAuth(region)
-            auth.headers()
-        except Exception as e:
-            self.state.update(running=False, status="error",
-                              message=f"Couldn't reach the local client: {e}")
-            return
+        auth = None
 
         while not self._stop.is_set():
             try:
-                presences = (auth.local_get("/chat/v4/presences") or {}).get("presences", [])
-                st = _self_session_state(presences, auth.puuid)
-                if st == "PREGAME":
-                    pg = auth.glz_get(f"/pregame/v1/players/{auth.puuid}")
-                    mid = pg.get("MatchID") if isinstance(pg, dict) else None
-                    if mid and mid not in done:
-                        if delay > 0 and self._stop.wait(delay):
-                            break
-                        match = auth.glz_get(f"/pregame/v1/matches/{mid}")
-                        side = _side_from_match(match, auth.puuid)
-                        map_name = map_name_from_path((match or {}).get("MapID", ""))
+                if auth is None:
+                    auth = LocalAuth(region)
+                    auth.headers()
+                pg = auth.glz_get(f"/pregame/v1/players/{auth.puuid}")
+                mid = pg.get("MatchID") if isinstance(pg, dict) else None
+                if mid and mid not in done:
+                    if delay > 0 and self._stop.wait(delay):
+                        break
+                    match = auth.glz_get(f"/pregame/v1/matches/{mid}")
+                    side = _side_from_match(match, auth.puuid)
+                    map_name = map_name_from_path((match or {}).get("MapID", ""))
 
-                        chosen = agent
-                        override = per_map.get((map_name or "").lower())
-                        if override:
-                            resolved = resolve_agent(override)
-                            if resolved:
-                                chosen = resolved
-                        agent_id = chosen["uuid"]
-                        auth.glz_post(f"/pregame/v1/matches/{mid}/select/{agent_id}")
-                        if mode == "lock":
-                            auth.glz_post(f"/pregame/v1/matches/{mid}/lock/{agent_id}")
-                        done.add(mid)
-                        self.state.update(
-                            running=False, status="locked", side=side,
-                            agent=chosen["name"], map=map_name,
-                            message=f"{'Locked' if mode == 'lock' else 'Hovered'} "
-                                    f"{chosen['name']}"
-                                    + (f" on {map_name}" if map_name and map_name != "Unknown" else "")
-                                    + "!"
-                                    + (f"  You're {side}." if side else ""))
-                        return
-
-                elif st is None:
-                    self.state.update(running=False, status="error",
-                                      message="Local client not reachable — is VALORANT open?")
+                    chosen = agent
+                    override = per_map.get((map_name or "").lower())
+                    if override:
+                        resolved = resolve_agent(override)
+                        if resolved:
+                            chosen = resolved
+                    agent_id = chosen["uuid"]
+                    selected = auth.glz_post(
+                        f"/pregame/v1/matches/{mid}/select/{agent_id}")
+                    if selected.status_code >= 400:
+                        raise RuntimeError(
+                            f"Agent selection refused (HTTP {selected.status_code})")
+                    if mode == "lock":
+                        locked = auth.glz_post(
+                            f"/pregame/v1/matches/{mid}/lock/{agent_id}")
+                        if locked.status_code >= 400:
+                            raise RuntimeError(
+                                f"Agent lock refused (HTTP {locked.status_code})")
+                    done.add(mid)
+                    self.state.update(
+                        running=False, status="locked", side=side,
+                        agent=chosen["name"], map=map_name,
+                        message=f"{'Locked' if mode == 'lock' else 'Hovered'} "
+                                f"{chosen['name']}"
+                                + (f" on {map_name}" if map_name and map_name != "Unknown" else "")
+                                + "!"
+                                + (f"  You're {side}." if side else ""))
                     return
+                self.state.update(
+                    running=True, status="waiting",
+                    message="Instalock armed — waiting for agent select…")
                 if self._stop.wait(1.0):
                     break
-            except Exception:
-                try:
-                    auth.headers(refresh=True)
-                except Exception:
-                    pass
+            except Exception as error:
+                auth = None
+                self.state.update(
+                    running=True, status="waiting",
+                    message=f"Instalock retrying after error: {error}")
                 if self._stop.wait(1.5):
                     break
 
