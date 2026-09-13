@@ -76,8 +76,12 @@ if (-not $venv.Ok) {
 
 
 Show-Phase 2 "Checking for updates..."
-if (-not (Test-Path (Join-Path $Root ".git"))) {
-    try {
+$updateArgs = @()
+if (Test-Path (Join-Path $Root ".git")) {
+    $updateArgs += "-DevOverride"
+    Note "Developer checkout detected - automatic update is enabled."
+}
+try {
         $tag = Test-UpdateAvailable
         if ($tag) {
             Write-Host ""
@@ -86,7 +90,7 @@ if (-not (Test-Path (Join-Path $Root ".git"))) {
             Write-Host "  This takes a minute; your settings and match data are kept." -ForegroundColor DarkGray
             Write-Host ""
             Write-ScoutLog -Log launcher -Message "update $tag available - applying before launch"
-            & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot "update.ps1")
+            & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot "update.ps1") @updateArgs
             if ($LASTEXITCODE -eq 0) {
                 Write-ScoutLog -Log launcher -Message "auto-update finished - now on v$(Get-LocalVersion)"
                 Write-Host "  Updated to v$(Get-LocalVersion)." -ForegroundColor Green
@@ -99,9 +103,8 @@ if (-not (Test-Path (Join-Path $Root ".git"))) {
                 Write-Host ""
             }
         }
-    } catch {
-        Write-ScoutLog -Log launcher -Message "update check/apply skipped: $($_.Exception.Message)"
-    }
+} catch {
+    Write-ScoutLog -Log launcher -Message "update check/apply skipped: $($_.Exception.Message)"
 }
 
 

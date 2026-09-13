@@ -197,7 +197,7 @@ try {
         for ($i = 1; $i -le 3; $i++) {
             try {
                 Invoke-WebRequest -Uri $zipUrl -OutFile $zip `
-                    -Headers @{ "User-Agent" = "valorant-scout" } -TimeoutSec 300
+                    -Headers (Get-GitHubHeaders) -TimeoutSec 300
                 $okDl = $true; break
             } catch {
                 Warn2 "download hiccup ($($_.Exception.Message)) - retrying ($i/3) ..."

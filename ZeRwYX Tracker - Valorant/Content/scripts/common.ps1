@@ -746,8 +746,23 @@ function Build-Frontend {
 function Get-LatestRelease([int]$timeoutSec = 8) {
     try {
         return Invoke-RestMethod -Uri "https://api.github.com/repos/$Repo/releases/latest" `
-            -Headers @{ "User-Agent" = "valorant-scout" } -TimeoutSec $timeoutSec
+            -Headers (Get-GitHubHeaders) -TimeoutSec $timeoutSec
     } catch { return $null }
+}
+
+function Get-GitHubHeaders {
+    $headers = @{ "User-Agent" = "valorant-scout" }
+    $token = $env:SCOUT_GITHUB_TOKEN
+    if (-not $token -and (Test-Path $EnvFile)) {
+        foreach ($line in (Get-Content $EnvFile -Encoding UTF8)) {
+            if ($line -match '^\s*SCOUT_GITHUB_TOKEN\s*=\s*(.*?)\s*$') {
+                $token = $Matches[1].Trim().Trim('"').Trim("'")
+                break
+            }
+        }
+    }
+    if ($token) { $headers["Authorization"] = "Bearer $token" }
+    return $headers
 }
 
 function Test-UpdateAvailable {
