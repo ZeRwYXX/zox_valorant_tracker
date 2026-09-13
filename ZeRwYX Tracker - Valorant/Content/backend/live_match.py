@@ -546,6 +546,12 @@ class LiveMatch:
             si = (((r.get("QueueSkills") or {}).get("competitive") or {})
                   .get("SeasonalInfoBySeasonID")) or {}
             cur = si.get(season, {}) if season else {}
+            if not cur and season:
+                cur = next((info for key, info in si.items()
+                            if str(key).lower() == str(season).lower()), {})
+            if not (cur.get("CompetitiveTier", 0) if isinstance(cur, dict) else 0) and si:
+                cur = next((info for info in si.values()
+                        if (info or {}).get("CompetitiveTier", 0)), {})
             out["tier"] = cur.get("CompetitiveTier", 0) or 0
             out["rr"] = cur.get("RankedRating", 0) or 0
             out["lb"] = cur.get("LeaderboardRank", 0) or 0

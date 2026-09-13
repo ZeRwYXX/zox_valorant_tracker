@@ -169,7 +169,7 @@ class LocalAuth:
                 except Exception:
                     continue
                 v = (priv.get("partyPresenceData") or {}).get("partyClientVersion")                    or priv.get("partyClientVersion")
-                if v:
+                if v and str(v).strip().lower() not in ("unknown", "none"):
                     _CLIENT_VERSION = v
                     _log(f"client version (local presence): {v}")
                     return v
