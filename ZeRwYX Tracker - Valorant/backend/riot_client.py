@@ -721,6 +721,23 @@ class RiotClient:
         except Exception as e:
             return {"ok": False, "status": "error", "message": f"Dodge failed: {e}"}
 
+    def check_side(self, region: str | None = None) -> dict:
+        try:
+            auth = LocalAuth(region)
+            auth.headers()
+            pre = auth.glz_get(f"/pregame/v1/players/{auth.puuid}")
+            match_id = pre.get("MatchID") if isinstance(pre, dict) else None
+            if not match_id:
+                return {"ok": False, "status": "error",
+                        "message": "Tu n'es pas en sélection des agents."}
+            match = auth.glz_get(f"/pregame/v1/matches/{match_id}")
+            team = ((match.get("AllyTeam") or {}).get("TeamID"))
+            side = {"Red": "Attaquant", "Blue": "Défenseur"}.get(team, "Inconnu")
+            return {"ok": True, "status": "side", "side": side,
+                    "message": f"Tu joues {side.lower()}."}
+        except Exception as e:
+            return {"ok": False, "status": "error", "message": f"Côté indisponible : {e}"}
+
     def _party_live(self) -> bool:
         pass
         return self.source_pref != "demo" and LocalAuth.available()

@@ -614,6 +614,12 @@ def dodge():
                           region=body.get("region"))
     return jsonify(result), (200 if result.get("ok") else 400)
 
+@app.post("/api/check-side")
+def check_side():
+    body = request.get_json(silent=True) or {}
+    result = client.check_side(region=body.get("region"))
+    return jsonify(result), (200 if result.get("ok") else 400)
+
 @app.post("/api/launch-offline")
 def launch_offline():
     import offline_launch
@@ -681,6 +687,7 @@ def instalock_start():
     mode = (body.get("mode") or "lock").lower()
     delay = body.get("delay", 0)
     dry_run = bool(body.get("dryRun", True))
+    loop = bool(body.get("loop", True))
     region = body.get("region")
     per_map = body.get("perMap") if isinstance(body.get("perMap"), dict) else None
     if not agent:
@@ -689,7 +696,8 @@ def instalock_start():
         ag = resolve_agent(agent)
         if not ag:
             return jsonify({"ok": False, "message": f"Unknown agent '{agent}'."}), 400
-        for mapn, name in (per_map or {}).items():
+        for mapn, config in (per_map or {}).items():
+            name = config.get("agent") if isinstance(config, dict) else config
             if not resolve_agent(name):
                 return jsonify({"ok": False,
                                 "message": f"Unknown agent '{name}' for map '{mapn}'."}), 400
@@ -699,7 +707,17 @@ def instalock_start():
                                    f"overrides applied) when agent select starts. "
                                    f"Turn dry-run OFF to auto-lock."})
     result = instalock_worker.start(agent, mode=mode, delay=delay, region=region,
-                                    per_map=per_map)
+                                    per_map=per_map, loop=loop)
+    return jsonify(result), (200 if result.get("ok") else 400)
+
+@app.post("/api/instalock/preset")
+def instalock_preset():
+    body = request.get_json(silent=True) or {}
+    result = instalock_worker.save_preset(
+        body.get("agent"), mode=(body.get("mode") or "lock").lower(),
+        delay=body.get("delay", 2), region=body.get("region"),
+        per_map=body.get("perMap") if isinstance(body.get("perMap"), dict) else None,
+        loop=bool(body.get("loop", True)))
     return jsonify(result), (200 if result.get("ok") else 400)
 
 @app.post("/api/instalock/stop")
@@ -708,7 +726,24 @@ def instalock_stop():
 
 @app.get("/api/instalock/status")
 def instalock_status():
-    return jsonify(instalock_worker.status())
+    state = instalock_worker.status()
+    preset = instalock_worker.preset or {}
+    if preset:
+        state.update({"preset": preset,
+                      "presetAgent": preset.get("agent"),
+                      "presetMode": preset.get("mode", "lock"),
+                      "presetLoop": preset.get("loop", True),
+                      "presetDelay": preset.get("delay", 2),
+                      "presetRegion": preset.get("region"),
+                      "presetPerMap": preset.get("perMap", {})})
+        if not state.get("agent"):
+            state.update({"agent": preset.get("agent"),
+                          "mode": preset.get("mode", "lock"),
+                          "loop": preset.get("loop", True),
+                          "delay": preset.get("delay", 2),
+                          "region": preset.get("region"),
+                          "perMap": preset.get("perMap", {})})
+    return jsonify(state)
 
 @app.get("/")
 def index():
