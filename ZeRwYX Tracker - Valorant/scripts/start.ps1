@@ -26,7 +26,7 @@ function Finish-Progress([string]$text) {
 
 Write-Host ""
 Write-Host "  VALORANT " -ForegroundColor Red -NoNewline
-Write-Host "SCOUT" -ForegroundColor White
+Write-Host "ZeRwYX Tracker" -ForegroundColor White
 Write-Host ""
 
 Write-ScoutLog -Log launcher -Message "startup requested (v$(Get-LocalVersion))"

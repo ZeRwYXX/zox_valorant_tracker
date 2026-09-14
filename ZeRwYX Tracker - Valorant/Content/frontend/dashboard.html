@@ -127,5 +127,77 @@ if(lastBoard)render(lastBoard);
 if(!$('hubBtn')){const hubButton=document.createElement('button');hubButton.id='hubBtn';hubButton.className='btn';hubButton.textContent='Tracker Hub';document.querySelector('.nav')?.prepend(hubButton)}$('hubBtn').onclick=()=>{$('hubModal').classList.remove('hidden');document.querySelector('[data-hub-tab="performance"]')?.click()};
 (()=>{const hub=$('hubModal'),tabs=[...document.querySelectorAll('[data-hub-tab]')],views=[...document.querySelectorAll('.hub-view')];if(!hub)return;const text=value=>esc(value??'--');function showTab(name){tabs.forEach(tab=>tab.classList.toggle('active',tab.dataset.hubTab===name));views.forEach(view=>view.classList.toggle('active',view.id==='hub-'+name));loadTab(name)}async function json(path,options){const response=await fetch(path,options);const data=await response.json();if(!response.ok)throw new Error(data.error||data.message||'Fonction indisponible');return data}function empty(id,message){$(id).innerHTML='<div class="hub-empty">'+text(message)+'</div>'}async function loadPerformance(){try{const data=await json('/api/performance');const summary=data.summary||{},points=Array.isArray(data.points)?data.points:[];$('hubPerformanceStats').innerHTML=[['Net RR',summary.net??0],['Victoires',summary.winRate==null?'--':summary.winRate+'%'],['Parties',summary.matches??0],['Rang',summary.currentTier??'--']].map(item=>'<div class="hub-stat"><strong>'+text(item[1])+'</strong><small>'+text(item[0])+'</small></div>').join('');const recent=points.slice(-20),deltas=recent.map(point=>Number(point.delta)||0),max=Math.max(1,...deltas.map(value=>Math.abs(value)));$('hubPerformanceChart').innerHTML=deltas.length?deltas.map(value=>'<span class="hub-bar" title="'+text(value)+' RR" style="height:'+Math.max(8,Math.round(Math.abs(value)/max*100))+'%;background:'+(value>=0?'var(--green)':'var(--red)')+'"></span>').join(''): '<div class="hub-empty">Aucune partie enregistrée.</div>';$('hubMatchList').innerHTML=points.length?points.slice().reverse().slice(0,20).map(point=>'<div class="hub-row"><span><strong>'+text(point.map||'Partie compétitive')+'</strong><small>'+text(point.agent||'Agent')+' · '+text(point.result||'En cours')+'</small></span><strong style="color:'+(Number(point.delta)>=0?'var(--green)':'var(--red)')+'">'+(Number(point.delta)>=0?'+':'')+text(point.delta??0)+' RR</strong></div>').join(''): '<div class="hub-empty">Aucune partie enregistrée.</div>'}catch(error){empty('hubMatchList',error.message)}}async function loadInventory(){try{const data=await json('/api/inventory');const wallet=data.wallet||{},counts=data.counts||{},tiers=data.tiers||{};$('hubInventoryStats').innerHTML=[['Valeur',data.totalVp==null?'--':data.totalVp+' VP'],['Valeur estimée',data.usdApprox==null?'--':'$'+data.usdApprox],['Skins',counts.skins??counts.total??0],['Armes',counts.weapons??'--']].map(item=>'<div class="hub-stat"><strong>'+text(item[1])+'</strong><small>'+text(item[0])+'</small></div>').join('');const rows=Object.entries(tiers);$('hubInventoryList').innerHTML=rows.length?rows.map(([tier,count])=>'<div class="hub-row"><strong>'+text(tier)+'</strong><span class="muted">'+text(count)+' objets</span></div>').join(''):'<div class="hub-empty">'+text(data.error||'Inventaire disponible après ouverture de VALORANT.')+'</div>'}catch(error){empty('hubInventoryList',error.message)}}async function loadPeople(){try{const data=await json('/api/encounters');const people=Array.isArray(data.players)?data.players:[];$('hubPeopleList').innerHTML=people.length?people.sort((a,b)=>(b.withCount||0)+(b.againstCount||0)-(a.withCount||0)-(a.againstCount||0)).map(person=>'<div class="hub-row"><span><strong>'+text(person.name||'Joueur masqué')+'</strong><small>'+text(person.rank||'Rang inconnu')+' · '+text(person.topAgent||'Agent inconnu')+'</small></span><span class="muted">Avec '+text(person.withCount||0)+' · Contre '+text(person.againstCount||0)+'<br>K/D '+text(person.withKd??'--')+'</span></div>').join(''):'<div class="hub-empty">Aucun rival ou coéquipier enregistré.</div>'}catch(error){empty('hubPeopleList',error.message)}}async function loadSessions(){try{const data=await json('/api/sessions'),items=[];if(data.active)items.push(data.active);items.push(...(data.archive||[]));$('hubSessionList').innerHTML=items.length?items.map(session=>'<div class="hub-row"><span><strong>'+text(session.active?'Session active':'Session archivées')+'</strong><small>'+text(session.summary?.matches??session.points?.length??0)+' parties · '+text(session.summary?.winRate??'--')+'% victoire</small></span><span class="muted">'+text(session.goal?.type||'Sans objectif')+'</span></div>').join(''):'<div class="hub-empty">Aucune session enregistrée.</div>'}catch(error){empty('hubSessionList',error.message)}}function loadTab(name){if(name==='performance')loadPerformance();if(name==='inventory')loadInventory();if(name==='people')loadPeople();if(name==='sessions')loadSessions()}$('hubBtn')?.addEventListener('click',()=>{hub.classList.remove('hidden');showTab('performance')});$('closeHub')?.addEventListener('click',()=>hub.classList.add('hidden'));hub.addEventListener('click',event=>{if(event.target===hub||event.target.classList.contains('fixed'))hub.classList.add('hidden')});tabs.forEach(tab=>tab.addEventListener('click',()=>showTab(tab.dataset.hubTab)));$('remoteHub')?.addEventListener('click',async()=>{const result=await json('/api/remote-mode',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'enable'})}).catch(error=>({ok:false,message:error.message}));showNotice(result.message||'Contrôle distant mis à jour.',!result.ok)});$('startSession')?.addEventListener('click',async()=>{const result=await json('/api/session/start',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}).catch(error=>({ok:false,message:error.message}));showNotice(result.message||'Session mise à jour.',!result.ok);loadSessions()});$('endSession')?.addEventListener('click',async()=>{const result=await json('/api/session/end',{method:'POST'}).catch(error=>({ok:false,message:error.message}));showNotice(result.message||'Session terminée.',!result.ok);loadSessions()})})();
 </script>
+<script>
+(()=>{
+	['inventoryBtn','skinsBtn','skinsModal'].forEach(id=>$(id)?.remove());
+	document.querySelectorAll('[data-hub-tab="inventory"],#hub-inventory').forEach(element=>element.remove());
+	const actions=document.querySelector('#offlineModal .offline-actions'),launch=$('launchOffline');
+	if(!actions||!launch)return;
+	const field=document.createElement('div');
+	field.className='field';
+	field.id='offlineStatusField';
+	field.innerHTML='<label for="offlineStatusSelect">Statut VALORANT</label><select id="offlineStatusSelect" disabled><option value="offline">Offline</option><option value="online">Online</option><option value="away">Away</option><option value="mobile">Mobile</option></select>';
+	actions.parentElement.insertBefore(field,actions);
+	const select=$('offlineStatusSelect'),originalRefresh=refreshOfflineStatus;
+	const syncStatus=async status=>{
+		const running=Boolean(status?.running);
+		select.disabled=!running;
+		launch.textContent=running?'Relais injecté':'Injecter le relais';
+		launch.classList.toggle('hidden',running);
+		if(status?.status&&[...select.options].some(option=>option.value===status.status))select.value=status.status;
+	};
+	refreshOfflineStatus=async showModal=>{const status=await originalRefresh(showModal);await syncStatus(status);return status};
+	launch.onclick=async()=>{
+		launch.disabled=true;
+		const response=await fetch('/api/launch-offline',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:'offline'})});
+		const result=await response.json();
+		launch.disabled=false;
+		showNotice(result.message||'Relais injecté.',!result.ok);
+		if(result.ok)await waitForOfflineStatus();
+		await refreshOfflineStatus(false);
+	};
+	select.onchange=async()=>{
+		select.disabled=true;
+		const response=await fetch('/api/offline-toggle',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:select.value})});
+		const result=await response.json();
+		showNotice(result.message||'Statut VALORANT mis à jour.',!result.ok);
+		await refreshOfflineStatus(false);
+	};
+	refreshOfflineStatus(false);
+})();
+</script>
+<style>
+.presence-dropdown{position:relative;display:inline-flex}.presence-trigger{display:inline-flex;align-items:center;gap:8px;min-width:142px;justify-content:space-between}.presence-trigger::after{content:"";width:7px;height:7px;border-right:1px solid currentColor;border-bottom:1px solid currentColor;transform:rotate(45deg) translateY(-2px);transition:transform .18s}.presence-dropdown.open .presence-trigger::after{transform:rotate(225deg) translate(-1px,-1px)}.presence-menu{position:absolute;top:calc(100% + 9px);right:0;z-index:20;width:218px;padding:7px;border:1px solid rgba(255,255,255,.14);border-radius:12px;background:#111217;box-shadow:0 18px 45px rgba(0,0,0,.55),0 0 0 1px rgba(255,70,85,.08);opacity:0;visibility:hidden;transform:translateY(-5px);transition:opacity .18s,transform .18s,visibility .18s}.presence-dropdown.open .presence-menu{opacity:1;visibility:visible;transform:translateY(0)}.presence-caption{padding:6px 9px 8px;color:var(--muted);font-size:9px;letter-spacing:.15em;text-transform:uppercase}.presence-option{display:flex;align-items:center;gap:9px;width:100%;padding:9px;border:0;border-radius:8px;background:transparent;color:var(--text);text-align:left;font-size:11px}.presence-option:hover,.presence-option.active{background:rgba(255,70,85,.12);color:#fff}.presence-option i{width:8px;height:8px;border-radius:50%;background:var(--muted);box-shadow:0 0 0 3px rgba(255,255,255,.04)}.presence-option.active i{background:var(--green);box-shadow:0 0 10px var(--green)}.presence-option[data-action="inject"]{margin-bottom:5px;border:1px solid rgba(255,70,85,.28);color:#ff7180}.presence-divider{height:1px;margin:5px 4px;background:var(--line)}
+@media(max-width:720px){.presence-menu{right:auto;left:0}.presence-trigger{min-width:136px}}.presence-trigger::before{content:"";width:8px;height:8px;flex:0 0 8px;border-radius:50%;background:#969ba5;box-shadow:0 0 8px rgba(150,155,165,.6)}.presence-trigger.status-offline::before{background:#9aa0aa;box-shadow:0 0 8px rgba(154,160,170,.7)}.presence-trigger.status-online::before{background:#46e0a0;box-shadow:0 0 10px rgba(70,224,160,.9)}.presence-trigger.status-away::before{background:#ffb84d;box-shadow:0 0 10px rgba(255,184,77,.9)}.presence-trigger.status-mobile::before{background:#7fa7ff;box-shadow:0 0 10px rgba(127,167,255,.9)}.presence-option[data-status="offline"] i{background:#9aa0aa}.presence-option[data-status="online"] i{background:#46e0a0}.presence-option[data-status="away"] i{background:#ffb84d}.presence-option[data-status="mobile"] i{background:#7fa7ff}
+</style>
+<script>
+(()=>{
+	const oldButton=$('offlineBtn');
+	if(!oldButton)return;
+	const wrapper=document.createElement('div');
+	wrapper.className='presence-dropdown';
+	wrapper.innerHTML='<button class="btn active presence-trigger" id="offlineBtn" type="button" aria-expanded="false" aria-haspopup="true"><span class="presence-label">Présence</span></button><div class="presence-menu" role="menu"><div class="presence-caption">Statut VALORANT</div><button class="presence-option" type="button" data-action="inject" role="menuitem"><i></i><span>Injecter le relais</span></button><div class="presence-divider"></div><button class="presence-option" type="button" data-status="offline" role="menuitem"><i></i><span>Offline</span></button><button class="presence-option" type="button" data-status="online" role="menuitem"><i></i><span>Online</span></button><button class="presence-option" type="button" data-status="away" role="menuitem"><i></i><span>Away</span></button><button class="presence-option" type="button" data-status="mobile" role="menuitem"><i></i><span>Mobile</span></button><div class="presence-divider"></div><button class="presence-option" type="button" data-action="panel" role="menuitem"><i></i><span>Ouvrir le panneau</span></button></div>';
+	oldButton.replaceWith(wrapper);
+	const trigger=$('offlineBtn'),menu=wrapper.querySelector('.presence-menu'),label=wrapper.querySelector('.presence-label'),options=[...wrapper.querySelectorAll('.presence-option')];
+	const close=()=>{wrapper.classList.remove('open');trigger.setAttribute('aria-expanded','false')};
+	const toggle=()=>{const open=wrapper.classList.toggle('open');trigger.setAttribute('aria-expanded',String(open))};
+	const paint=status=>{const value=String(status?.status||'offline'),running=Boolean(status?.running);label.textContent=running?value[0].toUpperCase()+value.slice(1):'Présence';trigger.classList.remove('status-offline','status-online','status-away','status-mobile');trigger.classList.add('status-'+(running?value:'offline'));options.forEach(option=>option.classList.toggle('active',option.dataset.status===value&&running));options[0].querySelector('span').textContent=running?'Relais injecté':'Injecter le relais'};
+	const change=async status=>{
+		const current=await (await fetch('/api/offline-status')).json();
+		const path=current.running?'/api/offline-toggle':'/api/launch-offline';
+		const response=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(current.running?{status}:{status})});
+		const result=await response.json();
+		showNotice(result.message||'Présence VALORANT mise à jour.',!result.ok);
+		await refreshOfflineStatus(false);
+		close();
+	};
+	trigger.onclick=toggle;
+	options.forEach(option=>option.onclick=()=>{if(option.dataset.status)change(option.dataset.status);else if(option.dataset.action==='inject')change('offline');else if(option.dataset.action==='panel'){openOffline();close()}});
+	document.addEventListener('click',event=>{if(!wrapper.contains(event.target))close()});
+	const refresh=refreshOfflineStatus;
+	refreshOfflineStatus=async showModal=>{const status=await refresh(showModal);paint(status);return status};
+	refreshOfflineStatus(false);
+})();
+</script>
 </body>
 </html>

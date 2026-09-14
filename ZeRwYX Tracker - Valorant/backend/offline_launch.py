@@ -300,7 +300,7 @@ def _fake_presence(version: str | None = None,
         "premierPresenceData": {
             "rosterId": "",
             "rosterName": _roster_name(status),
-            "rosterTag": "Scout Active", "rosterType": "VCT",
+            "rosterTag": "ZeRwYX Active", "rosterType": "VCT",
             "division": 0, "score": 0, "plating": 0,
             "showAura": False, "showTag": True, "showPlating": False,
         },
@@ -643,7 +643,7 @@ class _Engine:
             conn.client_writer.write(_fake_message(
                 f"ZeRwYX Tracker is active — friends see you as {self.status.upper()}. "
                 "Message me 'online', 'offline', 'away' or 'mobile' to switch "
-                "anytime (or use the Scout app / website)."))
+                "anytime (or use the ZeRwYX Tracker app / website)."))
             await conn.client_writer.drain()
         except Exception:
             pass
