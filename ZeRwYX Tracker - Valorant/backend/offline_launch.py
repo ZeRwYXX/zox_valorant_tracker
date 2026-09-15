@@ -1018,7 +1018,7 @@ def _helper_main() -> int:
                 if command == "status":
                     result = _status_local()
                 elif command == "launch":
-                    result = _launch_local(payload.get("status"))
+                    result = _launch_local(payload.get("status"), force=bool(payload.get("force", False)))
                 elif command == "set_status":
                     result = _set_status_local(str(payload.get("status") or ""))
                 elif command == "set_enabled":
@@ -1077,8 +1077,8 @@ def _ensure_helper() -> bool:
     return False
 
 
-def _launch_local(status_: str | None = None) -> dict:
-    _dbg(f"launch: requested (status={status_!r})", echo=True)
+def _launch_local(status_: str | None = None, force: bool = False) -> dict:
+    _dbg(f"launch: requested (status={status_!r}, force={force})", echo=True)
     if not sys.platform.startswith("win"):
         return {"ok": False, "message": "Offline mode is Windows-only."}
 
@@ -1119,13 +1119,13 @@ def _launch_local(status_: str | None = None) -> dict:
                        f"Your friends will see you as {_engine.status}."}
 
 
-def launch(status_: str | None = None) -> dict:
+def launch(status_: str | None = None, force: bool = False) -> dict:
     if _HELPER_MODE:
-        return _launch_local(status_)
+        return _launch_local(status_, force=force)
     if not _ensure_helper():
         return {"ok": False,
                 "message": "Couldn't start the offline-mode relay helper."}
-    return (_helper_request("launch", {"status": status_}, timeout=60.0)
+    return (_helper_request("launch", {"status": status_, "force": force}, timeout=60.0)
             or {"ok": False, "message": "Offline-mode relay stopped unexpectedly."})
 
 

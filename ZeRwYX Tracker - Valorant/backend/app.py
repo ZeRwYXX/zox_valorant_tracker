@@ -568,7 +568,7 @@ def profile(puuid: str):
     data = None
     if _live_enabled():
         try:
-            data = live_match.LiveMatch(LocalAuth()).player_career(puuid)
+            data = live_match.LiveMatch(LocalAuth()).player_career(puuid, count=4)
             if not data.get("matches"):
                 data = None
         except Exception:
@@ -628,7 +628,7 @@ def check_side():
 def launch_offline():
     import offline_launch
     body = request.get_json(silent=True) or {}
-    result = offline_launch.launch(body.get("status"))
+    result = offline_launch.launch(body.get("status"), force=bool(body.get("force", False)))
     return jsonify(result), (200 if result.get("ok") else 400)
 
 @app.get("/api/offline-status")

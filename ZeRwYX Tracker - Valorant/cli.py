@@ -248,7 +248,7 @@ def render(board) -> Group:
             legend.append(f"●{p['number']} ", style=f"bold {p['color']}")
             legend.append(f"{p['size']}-stack   ", style="grey62")
 
-    panel = Panel(table, title="[bold #FF4655]VALORANT[/] [bold #ECE8E1]SCOUT[/]",
+    panel = Panel(table, title="[bold #FF4655]ZERWYX[/] [bold #ECE8E1]TRACKER[/]",
                   subtitle=head, border_style="#FF4655", box=box.HEAVY, padding=(0, 1))
     rows = [panel, legend]
     if notice:

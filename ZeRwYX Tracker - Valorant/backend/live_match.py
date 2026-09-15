@@ -124,13 +124,38 @@ def compute_smurf(*, level, peak_tier, rank_tier, kd, win_rate, games) -> tuple[
     flagged = ((level or 0) < 60 and len(reasons) >= 1) or len(reasons) >= 2
     return flagged, reasons
 
+def ultimate_state(player: dict) -> tuple[bool | None, int | None, int | None]:
+    sources = [player]
+    for key in ("Stats", "PlayerStats", "stats", "playerStats", "Abilities", "abilities"):
+        value = player.get(key)
+        if isinstance(value, dict):
+            sources.append(value)
+    ready = points = cost = None
+    for source in sources:
+        if ready is None:
+            value = source.get("UltimateReady", source.get("ultimateReady", source.get("UltReady", source.get("ultReady"))))
+            if isinstance(value, bool):
+                ready = value
+        if points is None:
+            value = source.get("UltimatePoints", source.get("ultimatePoints", source.get("UltPoints", source.get("ultPoints"))))
+            if isinstance(value, (int, float)):
+                points = int(value)
+        if cost is None:
+            value = source.get("UltimateCost", source.get("ultimateCost", source.get("UltCost", source.get("ultCost"))))
+            if isinstance(value, (int, float)):
+                cost = int(value)
+    if ready is None and points is not None and cost is not None:
+        ready = points >= cost
+    return ready, points, cost
+
 def assemble_player(*, puuid, name, name_hidden, team, is_self, agent_id,
                     rank_tier, rr, leaderboard, peak_tier, prev_tier,
                     win_rate, games, kd, hs, level, level_hidden, party,
                     skin=None, peak_act=None, rr_earned=None,
                     player_card=None, title=None, weapons=None,
                     selection=None, smurf=False, smurf_reasons=None,
-                    intel=None) -> dict:
+                    intel=None, ultimate_ready=None, ultimate_points=None,
+                    ultimate_cost=None) -> dict:
     pass
     agent = resolve_agent(agent_id or "") or {}
     rank = rank_from_tier(rank_tier)
@@ -177,6 +202,9 @@ def assemble_player(*, puuid, name, name_hidden, team, is_self, agent_id,
         "party": party,
         "smurf": bool(smurf),
         "smurfReasons": smurf_reasons or [],
+        "ultimateReady": ultimate_ready,
+        "ultimatePoints": ultimate_points,
+        "ultimateCost": ultimate_cost,
 
         "topAgents": intel.get("topAgents") or [],
         "form": intel.get("form") or [],
@@ -812,7 +840,22 @@ class LiveMatch:
             resolved = {r[0]: r[1:] for r in ex.map(fetch_player, raw_players)}
 
         if uncached_kd:
-            self._spawn_kd_fill(match_id, uncached_kd, season, prev_season)
+            if state == "PREGAME" and include_stats:
+                def fill_pregame(puuid):
+                    entry = _CACHE.get(f"{match_id}:{puuid}")
+                    if entry is None or entry.get("kd_done"):
+                        return
+                    kd, hs, _, status, intel = self.kd_hs(puuid, count=5)
+                    if kd is not None:
+                        entry["kd"], entry["hs"] = kd, hs
+                        entry["intel"], entry["kd_done"] = intel, True
+                    elif status != "throttled":
+                        entry["kd_done"] = True
+
+                with ThreadPoolExecutor(max_workers=min(5, len(uncached_kd))) as ex:
+                    list(ex.map(fill_pregame, uncached_kd))
+            else:
+                self._spawn_kd_fill(match_id, uncached_kd, season, prev_season)
 
         players = []
         for p in raw_players:
@@ -827,6 +870,7 @@ class LiveMatch:
                 else:
                     name = f"Player {len(players) + 1}"
             rk = cached["rk"]
+            ultimate_ready, ultimate_points, ultimate_cost = ultimate_state(p)
             weapons = weapons_by_puuid.get(puuid.lower(), [])
             vandal = next((w["skin"] for w in weapons
                            if w["weapon"] == "Vandal" and w.get("skin")), None)
@@ -856,6 +900,9 @@ class LiveMatch:
                 player_card=valapi.player_card(ident.get("PlayerCardID")),
                 title=valapi.title_text(ident.get("PlayerTitleID")),
                 smurf=smurf, smurf_reasons=smurf_reasons,
+                ultimate_ready=ultimate_ready,
+                ultimate_points=ultimate_points,
+                ultimate_cost=ultimate_cost,
             ))
 
         map_name = map_name_from_path(map_id)
@@ -1151,6 +1198,7 @@ class LiveMatch:
             "kd": round(kills / deaths, 2) if deaths else float(kills),
             "acs": round(st.get("score", 0) / rounds) if rounds else 0,
             "hsPct": round(heads / hits * 100) if hits else None,
+            "ultimateCasts": (st.get("abilityCasts") or {}).get("ultimateCasts"),
             "partySize": max(1, party_size),
             "scores": {tid: team.get("roundsWon", 0) for tid, team in teams.items()},
             "teammates": teammates,
