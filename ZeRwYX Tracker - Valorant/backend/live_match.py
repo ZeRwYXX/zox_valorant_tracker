@@ -1094,6 +1094,10 @@ class LiveMatch:
                     heads_by_player[player_id] = heads_by_player.get(player_id, 0) + dmg.get("headshots", 0)
 
         kills, deaths = st.get("kills", 0), st.get("deaths", 0)
+        player_scores = {
+            p.get("subject"): (p.get("stats", {}) or {}).get("score", 0)
+            for p in players if p.get("subject")
+        }
         hits = hits_by_player.get(puuid, 0)
         heads = heads_by_player.get(puuid, 0)
         agent = resolve_agent((subj.get("characterId") or "")) or {}
@@ -1140,6 +1144,7 @@ class LiveMatch:
             "agent": agent.get("name", "Unknown"),
             "agentPortrait": agent.get("portrait"),
             "agentColor": agent.get("color", "#8B978F"),
+            "isMatchMvp": bool(player_scores and player_scores.get(puuid) == max(player_scores.values())),
             "kills": kills,
             "deaths": deaths,
             "assists": st.get("assists", 0),

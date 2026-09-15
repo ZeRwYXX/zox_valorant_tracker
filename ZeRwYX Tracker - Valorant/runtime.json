@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "app": {
-    "version": "2.2.6",
+    "version": "2.2.7",
     "channel": "stable"
   },
   "python": {
