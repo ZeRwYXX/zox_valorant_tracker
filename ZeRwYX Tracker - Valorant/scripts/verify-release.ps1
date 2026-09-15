@@ -26,7 +26,7 @@ try {
 
     Step "Forbidden-content scan ..."
 
-    $forbidden = @('(^|/)\.env$', '\.env\.local', '(^|/)frontend/', '(^|/)node_modules/',
+    $forbidden = @('(^|/)\.env$', '\.env\.local', '(^|/)node_modules/',
                    '(^|/)__pycache__/', '\.pyc$', '(^|/)\.venv/', '(^|/)\.scout/',
                    '(^|/)backend/data/', '(^|/)\.next/', '(^|/)\.git/', '(^|/)ops/',
                    '(^|/)vendor/', '(^|/)tests/', '(^|/)\.github/', '(^|/)\.claude/', 'client_id$')

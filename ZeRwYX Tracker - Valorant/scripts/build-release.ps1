@@ -19,11 +19,11 @@ $AllowExact = @(
     "runtime.json", "install.bat", "start.bat", "UPDATE.bat",
     "run.py", "cli.py"
 )
-$AllowPrefix = @("assets/", "backend/", "docs/", "scripts/", "icons/")
+$AllowPrefix = @("assets/", "backend/", "docs/", "frontend/", "scripts/", "icons/")
 
 
 $ForbiddenPatterns = @(
-    '(^|/)\.env$', '\.env\.local', '(^|/)frontend/', '(^|/)node_modules/',
+    '(^|/)\.env$', '\.env\.local', '(^|/)node_modules/',
     '(^|/)__pycache__/', '\.pyc$', '(^|/)\.venv/', '(^|/)\.scout/',
     '(^|/)backend/data/', '(^|/)\.next/', '(^|/)\.git/', '(^|/)ops/',
     '(^|/)vendor/', '(^|/)tests/', '(^|/)\.github/', '(^|/)\.claude/'
