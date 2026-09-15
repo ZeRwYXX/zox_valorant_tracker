@@ -251,5 +251,16 @@ if(!$('hubBtn')){const hubButton=document.createElement('button');hubButton.id='
 	const wait=setInterval(()=>{if(Object.keys(agentByName).length){clearInterval(wait);addFilters();buildMaps();bindDraftControls();loadPreset()}},250);
 })();
 </script>
+<script>
+(()=>{
+	document.title='ZeRwYX Tracker - Tableau de bord local';
+	const nav=document.querySelector('.topbar .nav');
+	if(nav&&!document.getElementById('localPanelLink')){
+		const link=document.createElement('a');
+		link.id='localPanelLink';link.className='btn active';link.href=window.location.origin+'/';link.textContent='Panel local';link.title='Ouvrir le panel ZeRwYX Tracker';
+		nav.prepend(link);
+	}
+})();
+</script>
 </body>
 </html>

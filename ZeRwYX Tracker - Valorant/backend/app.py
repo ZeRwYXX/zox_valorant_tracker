@@ -166,6 +166,10 @@ def health():
 def dashboard():
     return send_from_directory(_FRONTEND_DIR, "dashboard.html")
 
+@app.get("/dashboard/")
+def dashboard_slash():
+    return dashboard()
+
 @app.get("/images/<path:filename>")
 def frontend_image(filename):
     return send_from_directory(os.path.join(_FRONTEND_DIR, "images"), filename)
@@ -846,7 +850,7 @@ def _start_ws_bridge() -> None:
     import scout_commands
     import remote_ably
 
-    frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000").rstrip("/")
+    frontend_url = os.getenv("FRONTEND_URL", "http://127.0.0.1:5000").rstrip("/")
     ws_port = int(os.getenv("WS_PORT", "7878"))
     token_endpoint = os.getenv("ABLY_TOKEN_ENDPOINT",
                                f"{frontend_url}/api/ably-token")

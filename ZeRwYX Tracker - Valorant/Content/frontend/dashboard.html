@@ -199,5 +199,16 @@ if(!$('hubBtn')){const hubButton=document.createElement('button');hubButton.id='
 	refreshOfflineStatus(false);
 })();
 </script>
+<script>
+(()=>{
+	document.title='ZeRwYX Tracker - Tableau de bord local';
+	const nav=document.querySelector('.topbar .nav');
+	if(nav&&!document.getElementById('localPanelLink')){
+		const link=document.createElement('a');
+		link.id='localPanelLink';link.className='btn active';link.href=window.location.origin+'/';link.textContent='Panel local';link.title='Ouvrir le panel ZeRwYX Tracker';
+		nav.prepend(link);
+	}
+})();
+</script>
 </body>
 </html>

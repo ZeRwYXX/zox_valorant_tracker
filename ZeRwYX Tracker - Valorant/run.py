@@ -11,6 +11,7 @@ import subprocess
 import sys
 import time
 import urllib.request
+import webbrowser
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
@@ -19,7 +20,7 @@ FRONTEND = ROOT / "frontend"
 SCOUT_DIR = ROOT / ".scout"
 IS_WIN = os.name == "nt"
 
-LOCAL_FRONTEND_HOST = "http://localhost"
+LOCAL_FRONTEND_HOST = "http://127.0.0.1"
 HOSTED_FRONTEND = "https://valorantscout.com"
 
 sys.path.insert(0, str(BACKEND))
@@ -634,18 +635,11 @@ def main():
             frontend_port = str(choose_port(frontend_port, "frontend",
                                             reserved={backend_port, ws_port}))
             frontend_url = (os.environ.get("LOCAL_FRONTEND_URL", "").strip()
-                            or f"http://localhost:{frontend_port}").rstrip("/")
+                            or f"http://127.0.0.1:{frontend_port}").rstrip("/")
         else:
-            localhost = os.environ.get("LOCALHOST", "true").strip().lower() in (
-                "1", "true", "yes", "on")
-            if localhost:
-                frontend_url = (os.environ.get("LOCAL_FRONTEND_URL", "").strip()
-                                or f"{LOCAL_FRONTEND_HOST}:{backend_port}").rstrip("/")
-                say("Using the bundled local dashboard — no hosted website is opened.", C_OK)
-            else:
-                frontend_url = (os.environ.get("FRONTEND_URL", "").strip()
-                                or HOSTED_FRONTEND).rstrip("/")
-                say("Using the normal hosted dashboard (LOCALHOST=false).", C_OK)
+            frontend_url = (os.environ.get("LOCAL_FRONTEND_URL", "").strip()
+                            or f"{LOCAL_FRONTEND_HOST}:{backend_port}").rstrip("/")
+            say("Using the bundled local dashboard — no hosted website is opened.", C_OK)
             say(f"Dashboard host: {frontend_url}")
 
         child_env = os.environ.copy()
@@ -687,10 +681,10 @@ def main():
                     die("VS-FRONTEND-001",
                         "frontend/.next is missing. Run install.bat -Frontend "
                         "to build the local frontend first.")
-                say(f"Starting frontend (production) → http://localhost:{frontend_port}")
+                say(f"Starting frontend (production) → http://127.0.0.1:{frontend_port}")
                 frontend_mode = "start"
             else:
-                say(f"Starting frontend → http://localhost:{frontend_port}")
+                say(f"Starting frontend → http://127.0.0.1:{frontend_port}")
                 frontend_mode = "dev"
             next_cli = FRONTEND / "node_modules" / "next" / "dist" / "bin" / "next"
             if not next_cli.exists():
@@ -711,9 +705,14 @@ def main():
                 die("VS-FRONTEND-001",
                     "The local frontend did not start. Run diagnostics.bat for details.")
 
-        say(f"Dashboard will open at {frontend_url}/dashboard", C_OK)
-        if not local_frontend:
-            say("Your browser may ask to allow local-network access — click Allow.", C_WARN)
+        dashboard_url = f"{frontend_url}/"
+        say(f"Dashboard will open at {dashboard_url}", C_OK)
+        try:
+            if not webbrowser.open_new_tab(dashboard_url):
+                warn(f"Could not open the browser automatically. Open this link: {dashboard_url}")
+        except Exception as exc:
+            LOG.warning("browser open failed: %s", exc)
+            warn(f"Could not open the browser automatically. Open this link: {dashboard_url}")
 
         if not ATTACHED:
             print(f"\n{C_OK}Web app + terminal scoreboard running. Press Ctrl+C to stop.{C_END}\n")
