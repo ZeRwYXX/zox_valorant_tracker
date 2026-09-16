@@ -6,9 +6,40 @@ import os
 import threading
 import time
 from datetime import datetime, timezone
+from pathlib import Path
 
 import requests
 import urllib3
+
+try:
+    from dotenv import load_dotenv
+except Exception:  # pragma: no cover
+    load_dotenv = None
+
+
+def _load_project_env() -> None:
+    root = Path(__file__).resolve().parents[1]
+    candidates = [root / ".env", root / "backend" / ".env"]
+    for path in candidates:
+        if not path.exists():
+            continue
+        if load_dotenv is not None:
+            load_dotenv(path, override=False)
+        else:
+            try:
+                for line in path.read_text(encoding="utf-8-sig", errors="replace").splitlines():
+                    line = line.strip()
+                    if not line or line.startswith("#") or "=" not in line:
+                        continue
+                    key, _, value = line.partition("=")
+                    key = key.strip()
+                    value = value.strip().strip('"').strip("'")
+                    os.environ.setdefault(key, value)
+            except Exception:
+                pass
+
+
+_load_project_env()
 
 import sample_data
 from agents import UUID_TO_NAME, resolve_agent
@@ -43,6 +74,24 @@ def _log(msg: str) -> None:
     if os.getenv("SCOUT_QUIET"):
         return
     print(f"[riot_client] {msg}", flush=True)
+
+def official_match_details(match_id: str) -> dict | None:
+    """Fetch published match details without exposing the local client token."""
+    api_key = os.getenv("RIOT_API_KEY", "").strip()
+    region = os.getenv("RIOT_REGION", "na").strip().lower()
+    cluster = _ROUTING.get(region, "americas")
+    if not api_key or not match_id:
+        return None
+    try:
+        response = requests.get(
+            f"https://{cluster}.api.riotgames.com/val/match/v1/matches/{match_id}",
+            headers={"X-Riot-Token": api_key}, timeout=8)
+        if not response.ok:
+            return None
+        payload = response.json()
+        return payload if isinstance(payload, dict) else None
+    except (requests.RequestException, ValueError):
+        return None
 
 _RIOT_RATE_LOCK = threading.Lock()
 try:

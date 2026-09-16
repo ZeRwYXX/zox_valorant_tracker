@@ -64,7 +64,8 @@ def map_name_from_path(map_id: str) -> str:
     pass
     if not map_id:
         return "Unknown"
-    leaf = map_id.rstrip("/").split("/")[-1]
+    normalized = str(map_id or "").rstrip("/")
+    leaf = normalized.split("/")[-1]
 
     alias = {"Triad": "Haven", "Duality": "Bind", "Bonsai": "Split",
              "Ascent": "Ascent", "Port": "Icebox", "Foxtrot": "Breeze",
@@ -78,7 +79,12 @@ def map_name_from_path(map_id: str) -> str:
              "Skirmish_A": "Skirmish A", "Skirmish_B": "Skirmish B",
              "Skirmish_C": "Skirmish C", "Skirmish_D": "Skirmish D",
              "Skirmish_E": "Skirmish E"}
-    return alias.get(leaf, leaf if leaf in MAPS else (leaf or "Unknown"))
+    if leaf in alias:
+        return alias[leaf]
+    for raw, name in alias.items():
+        if f"/{raw}/" in f"{normalized}/":
+            return name
+    return leaf if leaf in MAPS else (leaf or "Unknown")
 
 PARTY_COLORS = [
     "#E34343", "#D843E3", "#4346E3", "#43E3D0",

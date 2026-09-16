@@ -285,13 +285,32 @@ def build_live(seed: int = 7, want_state: str | None = None) -> dict:
                 if _LAST_GOOD["board"] and time.time() - _LAST_GOOD["at"] < _HOLD_SECS:
                     return _LAST_GOOD["board"]
                 notice = _client_notice()
-                if client.source_pref == "local":
+                if client.source_pref in ("auto", "local"):
                     return {"state": "OFFLINE", "stateLabel": "Offline", "source": "local",
                             "error": str(e), "players": [], "teams": {}, "parties": [],
                             "notice": notice, "appVersion": APP_VERSION}
     elif client.source_pref != "demo" and not LocalAuth.available():
 
         notice = _client_notice()
+
+    if client.source_pref == "auto":
+        return {
+            "state": "OFFLINE",
+            "stateLabel": "Client VALORANT indisponible",
+            "source": "local",
+            "map": None,
+            "score": None,
+            "players": [],
+            "teams": {},
+            "parties": [],
+            "notice": {
+                "level": "error",
+                "action": "open_game",
+                "message": "Le client Riot n'est pas détecté. Les données de démo sont désactivées pour éviter d'afficher une fausse carte ou un faux score.",
+            },
+            "sourceDetail": "Données live locales indisponibles",
+            "appVersion": APP_VERSION,
+        }
 
     board = (sample_match.generate_lobby(seed)
              if (want_state or "").lower() == "menus"
@@ -560,15 +579,23 @@ def profile(puuid: str):
     if not puuid:
         return jsonify({"error": "puuid required"}), 400
 
+    try:
+        start_index = max(0, int(request.args.get("start", 0)))
+        count = min(4, max(1, int(request.args.get("count", 4))))
+    except (TypeError, ValueError):
+        return jsonify({"error": "Invalid history pagination."}), 400
+
     now = time.time()
-    cached = _CACHE.get(f"profile:{puuid}")
+    cache_key = f"profile:{puuid}:{start_index}:{count}"
+    cached = _CACHE.get(cache_key)
     if cached and now - cached[0] < _CACHE_TTL:
         return jsonify(cached[1])
 
     data = None
     if _live_enabled():
         try:
-            data = live_match.LiveMatch(LocalAuth()).player_career(puuid, count=4)
+            data = live_match.LiveMatch(LocalAuth()).player_career(
+                puuid, count=count, start_index=start_index)
             if not data.get("matches"):
                 data = None
         except Exception:
@@ -577,7 +604,7 @@ def profile(puuid: str):
     if data is None:
         data = sample_match.career(puuid)
 
-    _CACHE[f"profile:{puuid}"] = (now, data)
+    _CACHE[cache_key] = (now, data)
     return jsonify(data)
 
 @app.get("/api/player/<puuid>")

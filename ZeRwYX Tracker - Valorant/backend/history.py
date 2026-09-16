@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 
-from datetime import datetime
+from datetime import datetime, timezone
 from concurrent.futures import ThreadPoolExecutor
 import json
 import os
@@ -97,7 +97,8 @@ def _valid_timezone(name: str | None) -> tuple[str, ZoneInfo]:
             return candidate, ZoneInfo(candidate)
         except (ZoneInfoNotFoundError, ValueError):
             pass
-    return "UTC", ZoneInfo("UTC")
+    # Windows installations may not ship the optional tzdata package.
+    return "UTC", timezone.utc
 
 
 def _quality(point: dict) -> int:

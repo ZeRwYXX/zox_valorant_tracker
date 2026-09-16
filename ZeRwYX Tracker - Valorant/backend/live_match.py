@@ -65,6 +65,7 @@ _RR_CACHE: dict[str, tuple] = {}
 
 _MATCH_DETAIL_CACHE: dict[str, dict] = {}
 _MATCH_DETAIL_MAX = 200
+_LIVE_STATS_CACHE: dict[str, tuple[float, dict[str, dict]]] = {}
 
 _CACHE_WRITE_LOCK = threading.Lock()
 
@@ -155,7 +156,8 @@ def assemble_player(*, puuid, name, name_hidden, team, is_self, agent_id,
                     player_card=None, title=None, weapons=None,
                     selection=None, smurf=False, smurf_reasons=None,
                     intel=None, ultimate_ready=None, ultimate_points=None,
-                    ultimate_cost=None) -> dict:
+                    ultimate_cost=None, kills=None, deaths=None,
+                    assists=None) -> dict:
     pass
     agent = resolve_agent(agent_id or "") or {}
     rank = rank_from_tier(rank_tier)
@@ -195,6 +197,9 @@ def assemble_player(*, puuid, name, name_hidden, team, is_self, agent_id,
         "games": games,
         "kd": kd,
         "hsPct": hs,
+        "kills": kills,
+        "deaths": deaths,
+        "assists": assists,
         "skin": skin,
         "weapons": weapons or [],
         "level": level,
@@ -669,6 +674,83 @@ class LiveMatch:
         except Exception:
             return None, None, None, "error", None
 
+    def current_match_stats(self, match_id: str) -> dict[str, dict]:
+        """Read live combat stats when match-details has started publishing them."""
+        now = time.time()
+        cached = _LIVE_STATS_CACHE.get(match_id)
+        if cached and now - cached[0] < 2.5:
+            return cached[1]
+
+        def _coerce_int(value):
+            if value is None:
+                return None
+            try:
+                return int(value)
+            except (TypeError, ValueError):
+                return None
+
+        def _stat_block(value):
+            if not isinstance(value, dict):
+                return {"kills": None, "deaths": None, "assists": None}
+            return {
+                "kills": _coerce_int(value.get("kills", value.get("Kills", 0))),
+                "deaths": _coerce_int(value.get("deaths", value.get("Deaths", 0))),
+                "assists": _coerce_int(value.get("assists", value.get("Assists", 0))),
+            }
+
+        stats: dict[str, dict] = {}
+        try:
+            detail = self.auth.pd_get(
+                f"/match-details/v1/matches/{match_id}", retries=1)
+            if not isinstance(detail, dict):
+                raise ValueError("no match detail payload")
+
+            if detail.get("errorCode") or "players" not in detail:
+                detail = riot_client.official_match_details(match_id)
+                if not isinstance(detail, dict):
+                    raise ValueError("match is not published yet")
+
+            for player in (detail.get("players") or []) + (detail.get("Players") or []):
+                if not isinstance(player, dict):
+                    continue
+                puuid = player.get("subject") or player.get("Subject")
+                if not puuid:
+                    continue
+                values = (player.get("stats")
+                          or player.get("Stats")
+                          or player.get("playerStats")
+                          or player.get("PlayerStats")
+                          or {})
+                block = _stat_block(values)
+                if any(value is not None for value in block.values()):
+                    stats[puuid] = block
+
+            if not stats:
+                for rr in detail.get("roundResults", []) or detail.get("RoundResults", []):
+                    if not isinstance(rr, dict):
+                        continue
+                    rows = rr.get("playerStats") or rr.get("PlayerStats") or []
+                    for item in rows:
+                        if not isinstance(item, dict):
+                            continue
+                        puuid = item.get("subject") or item.get("Subject")
+                        if not puuid:
+                            continue
+                        nested = item.get("stats") or item.get("Stats") or {}
+                        block = _stat_block(nested)
+                        if block["kills"] is None and block["deaths"] is None and block["assists"] is None:
+                            block = _stat_block(item)
+                        entry = stats.setdefault(puuid, {"kills": 0, "deaths": 0, "assists": 0})
+                        for key in ("kills", "deaths", "assists"):
+                            value = block.get(key)
+                            if value is None:
+                                continue
+                            entry[key] = (entry.get(key) or 0) + value
+        except Exception:
+            stats = {}
+        _LIVE_STATS_CACHE[match_id] = (now, stats)
+        return stats
+
     def _spawn_kd_fill(self, match_id, puuids, season, prev_season) -> None:
         pass
         with _KD_FILL_LOCK:
@@ -839,6 +921,7 @@ class LiveMatch:
         with ThreadPoolExecutor(max_workers=min(6, len(raw_players) or 1)) as ex:
             resolved = {r[0]: r[1:] for r in ex.map(fetch_player, raw_players)}
 
+        current_stats = self.current_match_stats(match_id) if state == "INGAME" else {}
         if uncached_kd:
             if state == "PREGAME" and include_stats:
                 def fill_pregame(puuid):
@@ -871,6 +954,9 @@ class LiveMatch:
                     name = f"Player {len(players) + 1}"
             rk = cached["rk"]
             ultimate_ready, ultimate_points, ultimate_cost = ultimate_state(p)
+            live_stats = current_stats.get(puuid) or next((p.get(key) for key in
+                               ("Stats", "PlayerStats", "stats", "playerStats")
+                               if isinstance(p.get(key), dict)), {})
             weapons = weapons_by_puuid.get(puuid.lower(), [])
             vandal = next((w["skin"] for w in weapons
                            if w["weapon"] == "Vandal" and w.get("skin")), None)
@@ -903,6 +989,9 @@ class LiveMatch:
                 ultimate_ready=ultimate_ready,
                 ultimate_points=ultimate_points,
                 ultimate_cost=ultimate_cost,
+                kills=live_stats.get("kills"),
+                deaths=live_stats.get("deaths"),
+                assists=live_stats.get("assists"),
             ))
 
         map_name = map_name_from_path(map_id)
@@ -1055,11 +1144,11 @@ class LiveMatch:
         _LOBBY_CACHE.update(key=key, at=now, board=board)
         return board
 
-    def player_career(self, puuid: str, count: int = 8) -> dict:
+    def player_career(self, puuid: str, count: int = 8, start_index: int = 0) -> dict:
         pass
         try:
             hist = self.auth.pd_get(
-                f"/match-history/v1/history/{puuid}?startIndex=0&endIndex={count}")
+                f"/match-history/v1/history/{puuid}?startIndex={start_index}&endIndex={start_index + count}")
             entries = hist.get("History", []) or [] if isinstance(hist, dict) else []
         except Exception:
             entries = []
@@ -1090,7 +1179,7 @@ class LiveMatch:
             try:
                 cu = self.auth.pd_get(
                     f"/mmr/v1/players/{puuid}/competitiveupdates"
-                    f"?startIndex=0&endIndex={min(20, max(10, count))}&queue=competitive")
+                    f"?startIndex={start_index}&endIndex={start_index + min(20, max(10, count))}&queue=competitive")
                 for update in (cu or {}).get("Matches", []) or []:
                     if update.get("MatchID"):
                         updates[update["MatchID"]] = update
@@ -1111,7 +1200,8 @@ class LiveMatch:
                 "rankIcon": valapi.rank_icon(tier or 0) if tier else None,
             })
 
-        return {"source": "local", "puuid": puuid, "matches": matches,
+        return {"source": "local", "puuid": puuid, "start": start_index,
+            "hasMore": len(entries) >= count, "matches": matches,
                 **_career_summary(matches)}
 
     def _career_match(self, md: dict, puuid: str, mid: str = "") -> dict | None:

@@ -55,6 +55,8 @@ def _build_allowed_origins(frontend_url: str) -> set[str]:
     origins = {
         "http://localhost:3000",
         "http://127.0.0.1:3000",
+        "http://localhost:5000",
+        "http://127.0.0.1:5000",
         frontend_url,
     }
     parsed = urlparse(frontend_url)
